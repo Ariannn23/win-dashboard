@@ -1,0 +1,513 @@
+import {
+  AlertTriangle,
+  ArrowUpRight,
+  Download,
+  Gauge,
+  Plus,
+  ShoppingCart,
+  TrendingUp,
+  UsersRound,
+} from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
+import { useAuth } from '@/app/providers/AuthProvider';
+import { useCrm } from '@/app/providers/CrmProvider';
+import { STATUS_LABELS } from '@/shared/lib/constants';
+import { initials } from '@/shared/lib/format';
+import { saleAmount } from '@/shared/lib/sales';
+import { PageSkeleton } from '@/shared/ui/Skeleton';
+import type { Sale } from '@/types';
+
+function buildStats(sales: Sale[]) {
+  return {
+    total: sales.length,
+    installed: sales.filter((sale) => sale.estado === 'INSTALADO').length,
+    pending: sales.filter((sale) => sale.estado === 'PENDIENTE_GRABACION').length,
+    canceled: sales.filter((sale) => sale.estado === 'CANCELADO').length,
+    rejected: sales.filter((sale) => sale.estado === 'RECHAZADO').length,
+  };
+}
+
+const chartBars = [
+  { label: 'Lun', value: 56, target: 72 },
+  { label: 'Mar', value: 63, target: 82 },
+  { label: 'Mie', value: 58, target: 68 },
+  { label: 'Jue', value: 38, target: 92 },
+  { label: 'Vie', value: 61, target: 76 },
+  { label: 'Sab', value: 66, target: 104 },
+  { label: 'Dom', value: 80, target: 96 },
+];
+
+export function DashboardPage() {
+  const { user } = useAuth();
+  const { isLoading, profiles, visibleSales } = useCrm();
+  const { sidebarCollapsed = false } = useOutletContext<{ sidebarCollapsed?: boolean }>();
+  if (!user) return null;
+  if (isLoading) return <PageSkeleton cards={4} tableRows={5} tableColumns={4} />;
+
+  const sales = visibleSales(user);
+  const stats = buildStats(sales);
+  const advisors = profiles.filter((profile) => profile.rol === 'ASESOR' && profile.activo).length;
+  const supervisors = profiles.filter((profile) => profile.rol === 'SUPERVISOR' && profile.activo).length;
+  const monthlyAmount = sales.reduce((acc, sale) => acc + saleAmount(sale), 0);
+
+  const recentSales = sales.slice(0, 3);
+  const metricCards = [
+    {
+      icon: UsersRound,
+      label: 'Clientes activos',
+      value: stats.total + advisors + supervisors,
+      trend: '+12.5%',
+    },
+    {
+      icon: Gauge,
+      label: 'MRR actual',
+      value: `S/${monthlyAmount.toLocaleString('es-PE')}`,
+      trend: '+8.2%',
+    },
+    {
+      icon: TrendingUp,
+      label: 'Capacidad de ventas',
+      value: '75%',
+      detail: `/${Math.max(stats.total * 2, 12)} objetivos`,
+      progress: 75,
+    },
+    {
+      icon: AlertTriangle,
+      label: 'Tickets pendientes',
+      value: stats.pending + stats.rejected + stats.canceled,
+      detail: 'hoy',
+      badge: 'Critico',
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <section className="flex flex-col justify-between gap-3 xl:flex-row xl:items-end">
+        <div>
+          <h1 className="text-[28px] font-extrabold tracking-[-0.03em] text-[#1F1F1F]">
+            Panel de Control
+          </h1>
+          <p className="mt-1.5 max-w-3xl text-sm font-semibold leading-6 text-[#6B625C]">
+            Visualizacion global del rendimiento comercial. Tienes{' '}
+            <span className="font-extrabold text-[#C94A00]">{stats.pending} nuevas activaciones</span>{' '}
+            pendientes de gestion.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2.5">
+          <button
+            type="button"
+            className="flex h-11 items-center gap-2 rounded-[14px] border border-[#E8D8CC] bg-[#F4E7DE] px-4 text-xs font-extrabold text-[#6B625C] hover:border-[#FF7A1A]"
+          >
+            <Download className="h-4 w-4" aria-hidden="true" />
+            Exportar Reporte
+          </button>
+          <button
+            type="button"
+            className="flex h-11 items-center gap-2 rounded-[14px] bg-gradient-to-r from-[#F24A00] to-[#C94A00] px-4 text-xs font-extrabold text-white shadow-[0_14px_22px_rgba(201,74,0,0.20)]"
+          >
+            <Plus className="h-5 w-5" aria-hidden="true" />
+            Nuevo Cliente
+          </button>
+        </div>
+      </section>
+
+      <section
+        className={
+          sidebarCollapsed
+            ? 'grid gap-4 xl:grid-cols-[0.95fr_1.05fr]'
+            : 'space-y-4'
+        }
+      >
+        <div className={sidebarCollapsed ? 'grid gap-4 sm:grid-cols-2' : 'grid gap-4 sm:grid-cols-2 xl:grid-cols-4'}>
+          {metricCards.map((metric) => (
+            <DashboardMetric key={metric.label} {...metric} />
+          ))}
+        </div>
+
+        {sidebarCollapsed ? (
+          <SalesObjectiveCard sidebarCollapsed={sidebarCollapsed} />
+        ) : (
+          <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
+            <SalesObjectiveCard sidebarCollapsed={sidebarCollapsed} />
+            <OperationalSummaryCard stats={stats} monthlyAmount={monthlyAmount} />
+          </div>
+        )}
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1fr_360px]">
+        <div className="space-y-4">
+          <section className="overflow-hidden rounded-[20px] border border-[#EDE4DC] bg-white shadow-[0_14px_34px_rgba(91,47,20,0.055)]">
+            <div className="flex items-center justify-between border-b border-[#EDE4DC] px-6 py-4">
+              <h2 className="text-base font-extrabold text-[#1F1F1F]">Actividad Reciente de Clientes</h2>
+              <button type="button" className="text-sm font-extrabold text-[#C94A00]">
+                Ver todos
+              </button>
+            </div>
+            <div className="grid grid-cols-[1.3fr_1fr_0.8fr_0.6fr] bg-[#FFF2E7] px-6 py-3.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#4B3024]">
+              <span>Cliente</span>
+              <span>Servicio</span>
+              <span>Estado</span>
+              <span className="text-right">Monto</span>
+            </div>
+            <div className="divide-y divide-[#EDE4DC]">
+              {(recentSales.length ? recentSales : sales).slice(0, 3).map((sale, index) => (
+                <article
+                  key={sale.id}
+                  className="grid grid-cols-[1.3fr_1fr_0.8fr_0.6fr] items-center px-6 py-4"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="grid h-10 w-10 place-items-center rounded-full bg-[#FFE2CC] text-xs font-extrabold text-[#C94A00]">
+                      {initials(sale.nombres_cliente)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-extrabold text-[#1F1F1F]">{sale.nombres_cliente}</p>
+                      <p className="text-xs font-semibold text-[#6B625C]">#{sale.numero_documento}</p>
+                    </div>
+                  </div>
+                  <p className="text-sm font-semibold text-[#4B3024]">{sale.plan_contratar}</p>
+                  <span
+                    className={`w-fit rounded-full px-4 py-1.5 text-xs font-extrabold ${
+                      sale.estado === 'INSTALADO'
+                        ? 'bg-[#DDF8E9] text-[#2FA66A]'
+                        : index === 1
+                          ? 'bg-[#FFF1C7] text-[#B46A00]'
+                          : 'bg-[#FFE2CC] text-[#C94A00]'
+                    }`}
+                  >
+                    {STATUS_LABELS[sale.estado]}
+                  </span>
+                  <p className="text-right text-base font-extrabold text-[#1F1F1F]">
+                    S/{saleAmount(sale).toFixed(2)}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-[20px] border border-[#EDE4DC] bg-white p-6 shadow-[0_14px_34px_rgba(91,47,20,0.055)]">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+              <h2 className="text-base font-extrabold text-[#1F1F1F]">Cobros Recientes</h2>
+              <div className="flex gap-3">
+                <input
+                  placeholder="Filtrar facturas..."
+                  className="h-10 rounded-[12px] border border-[#E8D8CC] bg-[#FFFCFA] px-3 text-sm font-semibold outline-none focus:border-[#FF7A1A]"
+                />
+                <button
+                  type="button"
+                  className="flex h-10 items-center gap-2 rounded-[12px] bg-[#C94A00] px-4 text-xs font-extrabold text-white"
+                >
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Nuevo Cobro
+                </button>
+              </div>
+            </div>
+            <div className="mt-5 divide-y divide-[#EDE4DC]">
+              {[
+                ['#INV-9402', 'Roberto Sanchez', '24 Oct, 2026', 'PAGADO', 'S/85.00'],
+                ['#INV-9403', 'Carla Fuentes', '23 Oct, 2026', 'PENDIENTE', 'S/120.00'],
+              ].map(([id, client, date, status, amount]) => (
+                <div key={id} className="grid grid-cols-[1fr_1.2fr_1fr_0.8fr_0.7fr] items-center py-3.5 text-sm">
+                  <span className="font-extrabold text-[#1F1F1F]">{id}</span>
+                  <span className="font-semibold text-[#4B3024]">{client}</span>
+                  <span className="font-semibold text-[#6B625C]">{date}</span>
+                  <span
+                    className={`w-fit rounded-full px-4 py-1.5 text-xs font-extrabold ${
+                      status === 'PAGADO' ? 'bg-[#DDF8E9] text-[#2FA66A]' : 'bg-[#FFF1C7] text-[#B46A00]'
+                    }`}
+                  >
+                    {status}
+                  </span>
+                  <span className="text-right font-extrabold text-[#1F1F1F]">{amount}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <aside className="space-y-4">
+          <section className="rounded-[20px] border border-[#EDE4DC] bg-white p-6 shadow-[0_14px_34px_rgba(91,47,20,0.055)]">
+            <h2 className="text-base font-extrabold text-[#1F1F1F]">Clientes Recientes</h2>
+            <div className="mt-5 space-y-4">
+              {(recentSales.length ? recentSales : sales).slice(0, 3).map((sale) => (
+                <div key={sale.id} className="flex items-center gap-4">
+                  <div className="grid h-10 w-10 place-items-center rounded-full bg-[#FFB48A] text-xs font-extrabold text-[#8C2D00]">
+                    {initials(sale.nombres_cliente)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-extrabold text-[#1F1F1F]">{sale.nombres_cliente}</p>
+                    <p className="text-sm font-semibold text-[#6B625C]">{sale.plan_contratar.split(' ').slice(0, 3).join(' ')}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button className="mt-6 h-10 w-full rounded-[13px] border border-[#E8D8CC] text-xs font-extrabold text-[#4B3024]" type="button">
+              Ver todos los clientes
+            </button>
+          </section>
+
+          <GoalCard />
+        </aside>
+      </section>
+
+      <button
+        type="button"
+        title="Accion rapida"
+        className="fixed bottom-6 right-6 grid h-13 w-13 place-items-center rounded-full bg-gradient-to-br from-[#F24A00] to-[#C94A00] p-3 text-white shadow-[0_14px_26px_rgba(201,74,0,0.25)]"
+      >
+        <Plus className="h-6 w-6" aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
+function DashboardMetric({
+  icon: Icon,
+  label,
+  value,
+  trend,
+  detail,
+  progress,
+  badge,
+}: {
+  icon: typeof ShoppingCart;
+  label: string;
+  value: number | string;
+  trend?: string;
+  detail?: string;
+  progress?: number;
+  badge?: string;
+}) {
+  return (
+    <section className="rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.055)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="grid h-11 w-11 place-items-center rounded-[14px] bg-[#FFE2CC] text-[#C94A00]">
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </div>
+        {trend && (
+          <span className="flex items-center gap-1 rounded-full bg-[#E9FFF2] px-2.5 py-1 text-xs font-extrabold text-[#2FA66A]">
+            {trend}
+            <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </span>
+        )}
+        {badge && (
+          <span className="rounded-full bg-[#FFE8E8] px-2.5 py-1 text-xs font-extrabold text-[#D64545]">
+            {badge}
+          </span>
+        )}
+      </div>
+      <p className="mt-4 text-xs font-extrabold uppercase tracking-[0.12em] text-[#6B625C]">{label}</p>
+      <div className="mt-1.5 flex items-end gap-2">
+        <p className="text-[28px] font-extrabold tracking-[-0.03em] text-[#1F1F1F]">{value}</p>
+        {detail && <span className="pb-1 text-xs font-bold text-[#6B625C]">{detail}</span>}
+      </div>
+      {typeof progress === 'number' && (
+        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#F4E7DE]">
+          <div className="h-full rounded-full bg-[#C94A00]" style={{ width: `${progress}%` }} />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SalesObjectiveCard({ sidebarCollapsed }: { sidebarCollapsed: boolean }) {
+  const totalValue = chartBars.reduce((total, bar) => total + bar.value, 0);
+  const totalTarget = chartBars.reduce((total, bar) => total + bar.target, 0);
+  const weeklyProgress = Math.round((totalValue / totalTarget) * 100);
+  const bestDay = chartBars.slice().sort((a, b) => b.value / b.target - a.value / a.target)[0];
+  const remaining = Math.max(0, totalTarget - totalValue);
+
+  return (
+    <section className="rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.055)]">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-base font-extrabold text-[#1F1F1F]">Ventas vs Objetivos</h2>
+          <p className="mt-1 text-sm font-semibold text-[#6B625C]">Rendimiento semanal por activaciones.</p>
+        </div>
+        <div className="flex rounded-[15px] bg-[#FFF2E7] p-1">
+          <button
+            className="rounded-[10px] bg-white px-3 py-1.5 text-xs font-extrabold text-[#C94A00] shadow-sm"
+            type="button"
+          >
+            Mensual
+          </button>
+          <button className="px-3 py-1.5 text-xs font-bold text-[#6B625C]" type="button">
+            Anual
+          </button>
+        </div>
+      </div>
+
+      <div className={`${sidebarCollapsed ? 'mt-6' : 'mt-5'} grid gap-5 xl:grid-cols-[1fr_170px]`}>
+        <div>
+          <div className={`${sidebarCollapsed ? 'h-[230px]' : 'h-[190px]'} flex items-end justify-between gap-4 rounded-[18px] bg-[#FFFCFA] px-4 pb-3 pt-5`}>
+            {chartBars.map((bar) => {
+              const progress = Math.min(100, Math.round((bar.value / bar.target) * 100));
+              return (
+                <div key={bar.label} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
+                  <div className="relative flex h-full w-full max-w-[54px] items-end overflow-hidden rounded-[14px] bg-[#EFE3DA] shadow-inner">
+                    <div
+                      className="absolute inset-x-0 bottom-0 rounded-t-[14px] bg-gradient-to-t from-[#D83A00] to-[#FF7A1A] shadow-[0_-8px_18px_rgba(242,74,0,0.16)]"
+                      style={{ height: `${progress}%` }}
+                    />
+                    <span className="absolute inset-x-0 bottom-3 text-center text-[10px] font-extrabold text-white/90 drop-shadow-[0_1px_2px_rgba(91,47,20,0.28)]">
+                      {progress}%
+                    </span>
+                  </div>
+                  <div className="text-center">
+                    <span className="block text-sm font-extrabold text-[#4B3024]">{bar.label}</span>
+                    <span className="block text-[10px] font-bold text-[#8A7F78]">
+                      {bar.value}/{bar.target}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <ObjectiveMiniStat label="Avance semana" value={`${weeklyProgress}%`} tone="orange" />
+            <ObjectiveMiniStat label="Mejor dia" value={bestDay.label} detail={`${Math.round((bestDay.value / bestDay.target) * 100)}%`} tone="green" />
+            <ObjectiveMiniStat label="Faltan" value={remaining} detail="ventas" tone="muted" />
+          </div>
+        </div>
+        <div className="rounded-[18px] border border-[#F1DAC8] bg-[#FFF8F3] p-4">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#8A7F78]">Resumen</p>
+          <p className="mt-2 text-3xl font-extrabold tracking-[-0.04em] text-[#1F1F1F]">{totalValue}</p>
+          <p className="text-xs font-bold text-[#6B625C]">ventas de {totalTarget} objetivo</p>
+          <div className="mt-4 h-3 overflow-hidden rounded-full bg-white">
+            <div className="h-full rounded-full bg-gradient-to-r from-[#D83A00] to-[#FF7A1A]" style={{ width: `${weeklyProgress}%` }} />
+          </div>
+          <p className="mt-4 text-xs font-semibold leading-5 text-[#6B625C]">
+            El contraste muestra el 100% disponible en claro y el avance real en naranja.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ObjectiveMiniStat({
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  label: string;
+  value: number | string;
+  detail?: string;
+  tone: 'orange' | 'green' | 'muted';
+}) {
+  const tones = {
+    orange: 'bg-[#FFF2E7] text-[#C94A00]',
+    green: 'bg-[#E9FFF2] text-[#2FA66A]',
+    muted: 'bg-[#F3EAE3] text-[#6B625C]',
+  };
+  return (
+    <div className="rounded-[15px] border border-[#F1DAC8] bg-white px-4 py-3">
+      <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#8A7F78]">{label}</p>
+      <div className="mt-1 flex items-end gap-2">
+        <span className="text-lg font-extrabold text-[#1F1F1F]">{value}</span>
+        {detail && <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${tones[tone]}`}>{detail}</span>}
+      </div>
+    </div>
+  );
+}
+
+function GoalCard() {
+  return (
+    <section className="relative overflow-hidden rounded-[20px] bg-gradient-to-br from-[#F24A00] via-[#E04400] to-[#A83B00] p-6 text-white shadow-[0_16px_32px_rgba(201,74,0,0.24)]">
+      <svg className="absolute -right-8 -top-8 h-36 w-36 text-white/15" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+        <circle cx="60" cy="60" r="44" stroke="currentColor" strokeWidth="14" />
+        <circle cx="60" cy="60" r="18" stroke="currentColor" strokeWidth="10" />
+        <path d="M60 17v20M60 83v20M17 60h20M83 60h20" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
+      </svg>
+      <svg className="absolute bottom-0 left-0 h-24 w-full text-white/12" viewBox="0 0 320 96" fill="none" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 74C42 44 69 70 105 42C143 12 180 38 213 28C253 15 280 32 320 8V96H0V74Z" fill="currentColor" />
+      </svg>
+      <div className="relative">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-white/75">Meta trimestral</p>
+            <h2 className="mt-1 text-2xl font-extrabold tracking-[-0.03em]">1.5K ventas</h2>
+          </div>
+          <span className="rounded-full bg-white/18 px-3 py-1 text-xs font-extrabold ring-1 ring-white/22">84%</span>
+        </div>
+        <p className="mt-4 max-w-xs text-sm font-semibold leading-6 text-white/88">
+          Faltan 240 ventas para cerrar la meta. Mantener el ritmo actual deja el objetivo al alcance.
+        </p>
+        <div className="mt-6 rounded-[16px] bg-white/14 p-3 ring-1 ring-white/18">
+          <div className="flex items-center justify-between text-xs font-extrabold text-white/86">
+            <span>1,260 logradas</span>
+            <span>1,500 objetivo</span>
+          </div>
+          <div className="mt-3 h-3 overflow-hidden rounded-full bg-[#8A2D00]/45">
+            <div className="relative h-full w-[84%] rounded-full bg-white">
+              <span className="absolute right-0 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-4 border-white bg-[#FF7A1A] shadow-[0_6px_16px_rgba(31,31,31,0.22)]" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function OperationalSummaryCard({
+  stats,
+  monthlyAmount,
+}: {
+  stats: ReturnType<typeof buildStats>;
+  monthlyAmount: number;
+}) {
+  return (
+    <section className="rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.055)]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-extrabold text-[#1F1F1F]">Resumen operativo</h2>
+          <p className="mt-1 text-sm font-semibold text-[#6B625C]">Estado comercial del dia.</p>
+        </div>
+        <span className="rounded-full bg-[#FFE2CC] px-3 py-1 text-xs font-extrabold text-[#C94A00]">
+          Hoy
+        </span>
+      </div>
+
+      <div className="mt-5 space-y-3">
+        <SummaryRow label="Instaladas" value={stats.installed} tone="success" />
+        <SummaryRow label="Pendientes" value={stats.pending} tone="warning" />
+        <SummaryRow label="Rechazadas" value={stats.rejected} tone="danger" />
+        <SummaryRow label="Canceladas" value={stats.canceled} tone="muted" />
+      </div>
+
+      <div className="mt-5 rounded-[16px] bg-[#FFF2E7] p-4">
+        <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-[#6B625C]">MRR proyectado</p>
+        <p className="mt-1 text-2xl font-extrabold tracking-[-0.03em] text-[#1F1F1F]">
+          S/{monthlyAmount.toLocaleString('es-PE')}
+        </p>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
+          <div className="h-full w-[72%] rounded-full bg-gradient-to-r from-[#F24A00] to-[#C94A00]" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SummaryRow({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: 'success' | 'warning' | 'danger' | 'muted';
+}) {
+  const colors = {
+    success: 'bg-[#DDF8E9] text-[#2FA66A]',
+    warning: 'bg-[#FFF1C7] text-[#B46A00]',
+    danger: 'bg-[#FFE8E8] text-[#D64545]',
+    muted: 'bg-[#F3EAE3] text-[#6B625C]',
+  };
+
+  return (
+    <div className="flex items-center justify-between rounded-[14px] border border-[#F1DAC8] px-4 py-3">
+      <span className="text-sm font-bold text-[#6B625C]">{label}</span>
+      <span className={`rounded-full px-3 py-1 text-xs font-extrabold ${colors[tone]}`}>{value}</span>
+    </div>
+  );
+}

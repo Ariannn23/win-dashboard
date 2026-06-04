@@ -1,0 +1,108 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  font-family:
+    Manrope, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #faf7f3;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #faf7f3;
+  color: #1f1f1f;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(255, 122, 26, 0.24);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cdbdb3 #f7eee7;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #f7eee7;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #cdbdb3;
+  border: 2px solid #f7eee7;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #bca99d;
+}
+
+*::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.soft-scrollbar {
+  scrollbar-color: rgba(188, 169, 157, 0.72) rgba(247, 238, 231, 0.56);
+}
+
+.soft-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.soft-scrollbar::-webkit-scrollbar-track {
+  background: rgba(247, 238, 231, 0.56);
+}
+
+.soft-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(188, 169, 157, 0.68);
+  border: 2px solid rgba(247, 238, 231, 0.56);
+}
+
+.soft-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(154, 132, 119, 0.78);
+}
+
+.soft-scrollbar::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.hidden-scrollbar {
+  scrollbar-width: none;
+}
+
+.hidden-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
