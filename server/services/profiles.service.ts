@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import { withAuthContext } from './prisma';
+import { withAuthContext } from './prisma.js';
 
 export async function listProfiles(userId: string) {
   return withAuthContext(userId, (tx) =>

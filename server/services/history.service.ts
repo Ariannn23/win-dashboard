@@ -1,4 +1,4 @@
-import { withAuthContext } from './prisma';
+import { withAuthContext } from './prisma.js';
 
 export async function listStatusHistory(userId: string) {
   return withAuthContext(userId, (tx) =>

@@ -1,5 +1,5 @@
 import type { Prisma, SaleStatus } from '@prisma/client';
-import { withAuthContext } from './prisma';
+import { withAuthContext } from './prisma.js';
 
 export async function listSalesForUser(userId: string) {
   return withAuthContext(userId, (tx) =>
