@@ -26,6 +26,14 @@ En modo demo cualquier contrasena es aceptada.
 
 Ejecuta `supabase/schema.sql` en Supabase SQL Editor. Incluye tablas, tipos, indices, triggers, Storage bucket y politicas RLS.
 
+Para cargar datos de prueba completos, ejecuta despues:
+
+```sql
+supabase/seed.sql
+```
+
+La seed crea usuarios demo en Supabase Auth, perfiles, ventas con distintos estados, meses y asesores, ademas de eventos de auditoria. La contrasena demo para los usuarios sembrados es `password123`.
+
 ## Estructura
 
 ```text

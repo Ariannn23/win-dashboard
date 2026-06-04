@@ -17,6 +17,7 @@ create table public.perfiles (
   id uuid primary key references auth.users(id) on delete cascade,
   nombres text not null,
   correo text not null unique,
+  correo_recuperacion text not null default '',
   rol public.user_role not null default 'ASESOR',
   activo boolean not null default true,
   created_at timestamptz not null default now()
@@ -147,8 +148,8 @@ begin
   end if;
 
   if tg_op = 'INSERT' then
-    if actor_role not in ('ADMIN', 'SUPERVISOR') then
-      raise exception 'solo_admin_o_supervisor_crea_ventas';
+    if actor_role not in ('ADMIN', 'SUPERVISOR', 'ASESOR') then
+      raise exception 'solo_admin_supervisor_o_asesor_crea_ventas';
     end if;
 
     if new.estado <> 'PENDIENTE_GRABACION' then
@@ -157,6 +158,10 @@ begin
 
     if actor_role = 'SUPERVISOR' and new.creado_por <> auth.uid() then
       raise exception 'supervisor_solo_crea_sus_ventas';
+    end if;
+
+    if actor_role = 'ASESOR' and (new.creado_por <> auth.uid() or new.asesor_id <> auth.uid()) then
+      raise exception 'asesor_solo_crea_sus_ventas';
     end if;
   end if;
 
@@ -290,7 +295,7 @@ create policy "ventas_insert_admin_supervisor"
 on public.ventas for insert
 to authenticated
 with check (
-  public.current_user_role() in ('ADMIN', 'SUPERVISOR')
+  public.current_user_role() in ('ADMIN', 'SUPERVISOR', 'ASESOR')
 );
 
 create policy "ventas_update_por_rol"
