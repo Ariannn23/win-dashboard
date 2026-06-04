@@ -11,6 +11,8 @@ npm run dev
 
 La app funciona en modo demo si no existen variables de Supabase. Para conectar Supabase, copia `.env.example` a `.env` y completa `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
 
+El consumo de datos esta separado en `src/services/crm`. Si Supabase esta configurado, el provider usa la BD; si no, usa el adaptador local con `localStorage` y datos demo.
+
 ## Usuarios demo
 
 | Rol | Correo |
@@ -46,6 +48,7 @@ src/
   shared/lib/       Constantes, permisos y formateadores
   shared/validation Esquemas Zod y tipos de formularios
   services/         Clientes externos y funciones de consumo
+    crm/            Adaptadores de datos local/Supabase
   mocks/            Datos demo para trabajar sin Supabase
 ```
 

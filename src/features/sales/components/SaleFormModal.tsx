@@ -28,7 +28,7 @@ interface SaleFormModalProps {
   profiles: Profile[];
   currentUser: Profile;
   onClose: () => void;
-  onSubmit: (values: SaleFormValues) => void;
+  onSubmit: (values: SaleFormValues) => void | Promise<void>;
 }
 
 const blankValues: SaleFormValues = {

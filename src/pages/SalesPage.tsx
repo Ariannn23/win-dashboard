@@ -177,19 +177,27 @@ export function SalesPage() {
           profiles={profiles}
           currentUser={user}
           onClose={() => setShowForm(false)}
-          onSubmit={(values) => {
-            upsertSale({
-              ...values,
-              id: editing?.id,
-              estado: editing?.estado,
-              creado_por: editing?.creado_por ?? user.id,
-            });
-            showToast({
-              title: editing ? 'Venta actualizada' : 'Venta registrada',
-              detail: editing ? 'Los cambios se guardaron correctamente.' : 'La venta quedo pendiente de grabacion.',
-              tone: 'success',
-            });
-            setShowForm(false);
+          onSubmit={async (values) => {
+            try {
+              await upsertSale({
+                ...values,
+                id: editing?.id,
+                estado: editing?.estado,
+                creado_por: editing?.creado_por ?? user.id,
+              });
+              showToast({
+                title: editing ? 'Venta actualizada' : 'Venta registrada',
+                detail: editing ? 'Los cambios se guardaron correctamente.' : 'La venta quedo pendiente de grabacion.',
+                tone: 'success',
+              });
+              setShowForm(false);
+            } catch (error) {
+              showToast({
+                title: 'No se pudo guardar la venta',
+                detail: error instanceof Error ? error.message : 'Intentalo nuevamente.',
+                tone: 'error',
+              });
+            }
           }}
         />
       )}
@@ -198,14 +206,22 @@ export function SalesPage() {
         <StatusChangeModal
           sale={statusSale}
           onClose={() => setStatusSale(null)}
-          onSubmit={(nextStatus, comment) => {
-            changeSaleStatus(statusSale.id, nextStatus, user, comment);
-            showToast({
-              title: 'Estado actualizado',
-              detail: 'El movimiento quedo registrado en el historial.',
-              tone: 'success',
-            });
-            setStatusSale(null);
+          onSubmit={async (nextStatus, comment) => {
+            try {
+              await changeSaleStatus(statusSale.id, nextStatus, user, comment);
+              showToast({
+                title: 'Estado actualizado',
+                detail: 'El movimiento quedo registrado en el historial.',
+                tone: 'success',
+              });
+              setStatusSale(null);
+            } catch (error) {
+              showToast({
+                title: 'No se pudo cambiar el estado',
+                detail: error instanceof Error ? error.message : 'Intentalo nuevamente.',
+                tone: 'error',
+              });
+            }
           }}
         />
       )}

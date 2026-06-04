@@ -57,12 +57,21 @@ export function UsersPage() {
       return;
     }
 
-    toggleProfile(profile.id);
-    showToast({
-      title: profile.activo ? 'Usuario suspendido' : 'Usuario activado',
-      detail: `${profile.nombres} fue ${profile.activo ? 'suspendido' : 'activado'} correctamente.`,
-      tone: 'success',
-    });
+    void toggleProfile(profile.id)
+      .then(() => {
+        showToast({
+          title: profile.activo ? 'Usuario suspendido' : 'Usuario activado',
+          detail: `${profile.nombres} fue ${profile.activo ? 'suspendido' : 'activado'} correctamente.`,
+          tone: 'success',
+        });
+      })
+      .catch((error) => {
+        showToast({
+          title: 'No se pudo cambiar el usuario',
+          detail: error instanceof Error ? error.message : 'Intentalo nuevamente.',
+          tone: 'error',
+        });
+      });
   };
 
   return (
@@ -217,14 +226,22 @@ export function UsersPage() {
         <UserFormModal
           profile={editing}
           onClose={() => setShowForm(false)}
-          onSubmit={(values) => {
-            upsertProfile({ ...values, id: editing?.id });
-            showToast({
-              title: editing ? 'Usuario actualizado' : 'Usuario creado',
-              detail: 'Los datos de acceso quedaron guardados.',
-              tone: 'success',
-            });
-            setShowForm(false);
+          onSubmit={async (values) => {
+            try {
+              await upsertProfile({ ...values, id: editing?.id });
+              showToast({
+                title: editing ? 'Usuario actualizado' : 'Usuario creado',
+                detail: 'Los datos de acceso quedaron guardados.',
+                tone: 'success',
+              });
+              setShowForm(false);
+            } catch (error) {
+              showToast({
+                title: 'No se pudo guardar el usuario',
+                detail: error instanceof Error ? error.message : 'Intentalo nuevamente.',
+                tone: 'error',
+              });
+            }
           }}
         />
       )}

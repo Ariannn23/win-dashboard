@@ -1,7 +1,7 @@
-import { CheckCircle2, Info, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
 import { createContext, useContext, useMemo, useState } from 'react';
 
-type ToastTone = 'success' | 'info' | 'warning';
+type ToastTone = 'success' | 'info' | 'warning' | 'error';
 
 interface ToastMessage {
   id: string;
@@ -52,8 +52,9 @@ function ToastCard({ message, onClose }: { message: ToastMessage; onClose: () =>
     success: 'border-[#BFEED3] bg-[#F2FFF7] text-[#009A4E]',
     info: 'border-[#D4E7FF] bg-[#F5FAFF] text-[#005DE8]',
     warning: 'border-[#FFE1A8] bg-[#FFF9EA] text-[#A86400]',
+    error: 'border-[#FFD0D0] bg-[#FFF5F5] text-[#D64545]',
   };
-  const Icon = message.tone === 'success' ? CheckCircle2 : Info;
+  const Icon = message.tone === 'success' ? CheckCircle2 : message.tone === 'error' ? AlertTriangle : Info;
 
   return (
     <article className={`flex gap-3 rounded-[16px] border p-4 shadow-[0_18px_42px_rgba(31,31,31,0.14)] backdrop-blur ${tones[message.tone]}`}>

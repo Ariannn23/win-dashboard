@@ -10,7 +10,7 @@ import type { Sale, SaleStatus } from '@/types';
 interface StatusChangeModalProps {
   sale: Sale;
   onClose: () => void;
-  onSubmit: (nextStatus: SaleStatus, comment: string) => void;
+  onSubmit: (nextStatus: SaleStatus, comment: string) => void | Promise<void>;
 }
 
 function simpleStatus(status: SaleStatus) {

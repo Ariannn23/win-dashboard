@@ -1,0 +1,192 @@
+import { supabase } from '@/services/supabase/client';
+import type { Profile, Sale, StatusHistory } from '@/types';
+import type {
+  CrmDataService,
+  CrmSnapshot,
+  ProfileUpsertPayload,
+  SaleUpsertPayload,
+  StatusChangeResult,
+} from './types';
+
+function requireSupabase() {
+  if (!supabase) throw new Error('Supabase no esta configurado');
+  return supabase;
+}
+
+function normalizeProfile(row: Profile): Profile {
+  return {
+    ...row,
+    correo_recuperacion: row.correo_recuperacion ?? '',
+  };
+}
+
+function historyWithNames(rows: Array<Omit<StatusHistory, 'usuario_nombre'>>, profiles: Profile[]): StatusHistory[] {
+  return rows.map((row) => ({
+    ...row,
+    usuario_nombre: profiles.find((profile) => profile.id === row.usuario_id)?.nombres ?? 'Usuario',
+  }));
+}
+
+function salePayload(payload: SaleUpsertPayload) {
+  return {
+    id: payload.id,
+    estado: payload.estado,
+    asesor_id: payload.asesor_id,
+    supervisor_id: payload.supervisor_id,
+    creado_por: payload.creado_por,
+    nombres_cliente: payload.nombres_cliente,
+    tipo_documento: payload.tipo_documento,
+    numero_documento: payload.numero_documento,
+    fecha_nacimiento: payload.fecha_nacimiento,
+    lugar_nacimiento: payload.lugar_nacimiento,
+    correo_cliente: payload.correo_cliente,
+    celular_principal: payload.celular_principal,
+    celular_referencia: payload.celular_referencia,
+    titular_linea: payload.titular_linea,
+    direccion: payload.direccion,
+    coordenadas: payload.coordenadas,
+    tipo_vivienda: payload.tipo_vivienda,
+    distrito: payload.distrito,
+    referencia: payload.referencia,
+    plan_contratar: payload.plan_contratar,
+    mesh: payload.mesh,
+    win_box: payload.win_box,
+    observaciones: payload.observaciones,
+    observaciones_back: payload.observaciones_back,
+    foto_dni: payload.foto_dni,
+    foto_recibo: payload.foto_recibo,
+    foto_selfie: payload.foto_selfie,
+  };
+}
+
+async function loadHistory(snapshotProfiles: Profile[]) {
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from('historial_estados')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return historyWithNames((data ?? []) as Array<Omit<StatusHistory, 'usuario_nombre'>>, snapshotProfiles);
+}
+
+export const supabaseCrmService: CrmDataService = {
+  async loadSnapshot(): Promise<CrmSnapshot> {
+    const client = requireSupabase();
+    const [profilesResult, salesResult] = await Promise.all([
+      client.from('perfiles').select('*').order('created_at', { ascending: true }),
+      client.from('ventas').select('*').order('created_at', { ascending: false }),
+    ]);
+
+    if (profilesResult.error) throw profilesResult.error;
+    if (salesResult.error) throw salesResult.error;
+
+    const profiles = ((profilesResult.data ?? []) as Profile[]).map(normalizeProfile);
+    const history = await loadHistory(profiles);
+
+    return {
+      profiles,
+      sales: (salesResult.data ?? []) as Sale[],
+      history,
+    };
+  },
+
+  async upsertSale(payload: SaleUpsertPayload) {
+    const client = requireSupabase();
+    const { data, error } = await client
+      .from('ventas')
+      .upsert(salePayload(payload))
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data as Sale;
+  },
+
+  async changeSaleStatus(
+    saleId,
+    nextStatus,
+    user,
+    comentario,
+    snapshot,
+  ): Promise<StatusChangeResult> {
+    const client = requireSupabase();
+    const { data, error } = await client.rpc('cambiar_estado_venta', {
+      p_venta_id: saleId,
+      p_estado: nextStatus,
+      p_comentario: comentario,
+    });
+
+    if (error) throw error;
+
+    const { data: latestHistory, error: historyError } = await client
+      .from('historial_estados')
+      .select('*')
+      .eq('venta_id', saleId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (historyError) throw historyError;
+
+    const history = latestHistory
+      ? historyWithNames([latestHistory as Omit<StatusHistory, 'usuario_nombre'>], snapshot.profiles)[0]
+      : undefined;
+
+    return {
+      sale: data as Sale,
+      history:
+        history && history.usuario_id === user.id
+          ? history
+          : history
+            ? { ...history, usuario_nombre: snapshot.profiles.find((profile) => profile.id === history.usuario_id)?.nombres ?? user.nombres }
+            : undefined,
+    };
+  },
+
+  async upsertProfile(payload: ProfileUpsertPayload, snapshot: CrmSnapshot) {
+    const client = requireSupabase();
+    const existing = payload.id ? snapshot.profiles.find((profile) => profile.id === payload.id) : undefined;
+
+    if (!existing) {
+      throw new Error('Para crear usuarios en Supabase se necesita una Edge Function con service role.');
+    }
+
+    const { data, error } = await client
+      .from('perfiles')
+      .update({
+        nombres: payload.nombres,
+        correo: payload.correo,
+        correo_recuperacion: payload.correo_recuperacion,
+        rol: payload.rol,
+        activo: payload.activo,
+      })
+      .eq('id', existing.id)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return normalizeProfile(data as Profile);
+  },
+
+  async toggleProfile(id: string) {
+    const client = requireSupabase();
+    const { data: current, error: currentError } = await client
+      .from('perfiles')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (currentError) throw currentError;
+
+    const { data, error } = await client
+      .from('perfiles')
+      .update({ activo: !current.activo })
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return normalizeProfile(data as Profile);
+  },
+};

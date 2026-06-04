@@ -30,7 +30,7 @@ export function LoginPage() {
     event.preventDefault();
     setError('');
     try {
-      await login(correo);
+      await login(correo, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo iniciar sesion');
     }

@@ -10,7 +10,7 @@ import type { Profile, Role } from '@/types';
 interface UserFormModalProps {
   profile?: Profile | null;
   onClose: () => void;
-  onSubmit: (values: UserFormValues) => void;
+  onSubmit: (values: UserFormValues) => void | Promise<void>;
 }
 
 function toFormValues(profile?: Profile | null): UserFormValues {
