@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  BACK
+  SUPERVISOR
+  ASESOR
+
+  @@map("user_role")
+}
+
+enum SaleStatus {
+  PENDIENTE_GRABACION
+  PROGRAMADO_GRABACION
+  GRABADO
+  PROGRAMADO_INSTALACION
+  INSTALADO
+  RECHAZADO
+  CANCELADO
+
+  @@map("sale_status")
+}
+
+enum DocumentType {
+  DNI
+  CE
+  PASAPORTE
+
+  @@map("document_type")
+}
+
+enum HousingType {
+  Casa
+  Multifamiliar
+
+  @@map("housing_type")
+}
+
+model Profile {
+  id                  String          @id @db.Uuid
+  nombres             String
+  correo              String          @unique
+  correo_recuperacion String          @default("")
+  rol                 UserRole        @default(ASESOR)
+  activo              Boolean         @default(true)
+  created_at          DateTime        @default(now()) @db.Timestamptz(6)
+  ventas_asesor       Sale[]          @relation("VentasAsesor")
+  ventas_supervisor   Sale[]          @relation("VentasSupervisor")
+  ventas_creadas      Sale[]          @relation("VentasCreadas")
+  historial           StatusHistory[] @relation("HistorialUsuario")
+
+  @@map("perfiles")
+}
+
+model Sale {
+  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  estado              SaleStatus      @default(PENDIENTE_GRABACION)
+  asesor_id           String          @db.Uuid
+  supervisor_id       String          @db.Uuid
+  creado_por          String          @db.Uuid
+  nombres_cliente     String
+  tipo_documento      DocumentType    @default(DNI)
+  numero_documento    String          @db.VarChar(15)
+  fecha_nacimiento    DateTime        @db.Date
+  lugar_nacimiento    String
+  correo_cliente      String
+  celular_principal   String          @db.VarChar(20)
+  celular_referencia  String          @db.VarChar(20)
+  titular_linea       String
+  direccion           String
+  coordenadas         String          @db.VarChar(100)
+  tipo_vivienda       HousingType
+  distrito            String
+  referencia          String
+  plan_contratar      String
+  mesh                Int             @default(0)
+  win_box             Int             @default(0)
+  observaciones       String          @default("")
+  observaciones_back  String          @default("")
+  foto_dni            String          @default("")
+  foto_recibo         String          @default("")
+  foto_selfie         String          @default("")
+  created_at          DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime        @default(now()) @db.Timestamptz(6)
+  asesor              Profile         @relation("VentasAsesor", fields: [asesor_id], references: [id])
+  supervisor          Profile         @relation("VentasSupervisor", fields: [supervisor_id], references: [id])
+  creador             Profile         @relation("VentasCreadas", fields: [creado_por], references: [id])
+  historial           StatusHistory[]
+
+  @@index([estado], map: "ventas_estado_idx")
+  @@index([asesor_id], map: "ventas_asesor_idx")
+  @@index([supervisor_id], map: "ventas_supervisor_idx")
+  @@index([numero_documento], map: "ventas_documento_idx")
+  @@map("ventas")
+}
+
+model StatusHistory {
+  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  venta_id        String     @db.Uuid
+  usuario_id      String     @db.Uuid
+  estado_anterior SaleStatus
+  estado_nuevo    SaleStatus
+  comentario      String     @default("")
+  created_at      DateTime   @default(now()) @db.Timestamptz(6)
+  venta           Sale       @relation(fields: [venta_id], references: [id], onDelete: Cascade)
+  usuario         Profile    @relation("HistorialUsuario", fields: [usuario_id], references: [id])
+
+  @@index([venta_id, created_at], map: "historial_venta_idx")
+  @@map("historial_estados")
+}

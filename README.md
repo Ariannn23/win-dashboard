@@ -36,6 +36,18 @@ supabase/seed.sql
 
 La seed crea usuarios demo en Supabase Auth, perfiles, ventas con distintos estados, meses y asesores, ademas de eventos de auditoria. La contrasena demo para los usuarios sembrados es `password123`.
 
+## Prisma
+
+Configura `DATABASE_URL` en `.env` con la conexion directa de Postgres/Supabase y ejecuta:
+
+```bash
+npm run db:generate
+npm run db:migrate
+npm run db:seed
+```
+
+Prisma queda para migraciones, seed y services de servidor. No se importa Prisma dentro del frontend porque Vite corre en navegador; los services Prisma estan en `server/services`.
+
 ## Estructura
 
 ```text
@@ -50,6 +62,11 @@ src/
   services/         Clientes externos y funciones de consumo
     crm/            Adaptadores de datos local/Supabase
   mocks/            Datos demo para trabajar sin Supabase
+server/
+  services/         Services de servidor basados en Prisma
+prisma/
+  schema.prisma     Modelo Prisma alineado a tablas public.*
+  migrations/       Migracion SQL con RLS, triggers, RPC y storage
 ```
 
 Los imports usan el alias `@/`, por ejemplo `@/shared/ui/StatCard`.
