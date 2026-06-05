@@ -9,13 +9,17 @@ export function canManageUsers(user?: Profile | null) {
   return user?.rol === 'ADMIN';
 }
 
+export function canManageAsesores(user?: Profile | null) {
+  return user?.rol === 'ADMIN' || user?.rol === 'SUPERVISOR';
+}
+
 export function canCreateSales(user?: Profile | null) {
-  return user?.rol === 'ADMIN' || user?.rol === 'SUPERVISOR' || user?.rol === 'ASESOR';
+  return user?.rol === 'ADMIN' || user?.rol === 'SUPERVISOR';
 }
 
 export function canEditSale(user: Profile | null | undefined, sale: Sale) {
   if (!user) return false;
-  if (user.rol === 'ADMIN' || user.rol === 'BACK') return true;
+  if (user.rol === 'ADMIN') return true;
   if (user.rol === 'SUPERVISOR') {
     return (
       (sale.creado_por === user.id || sale.supervisor_id === user.id) &&

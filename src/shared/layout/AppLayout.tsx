@@ -40,9 +40,29 @@ export function AppLayout() {
 
   if (!user) return null;
 
-  const items = canManageUsers(user)
-    ? [...navItems, { to: '/usuarios', label: 'Usuarios', icon: UserRound }]
-    : navItems;
+  const isAsesor = user.rol === 'ASESOR';
+  const isAdmin = user.rol === 'ADMIN';
+  const isSupervisor = user.rol === 'SUPERVISOR';
+  
+  const getNavItems = () => {
+    if (isAsesor) {
+      return [{ to: '/ventas', label: 'Ventas', icon: ShoppingCart }];
+    }
+    
+    let baseItems = navItems;
+    if (!isAdmin) {
+      // Hide Planes for non-admins
+      baseItems = baseItems.filter(item => item.to !== '/planes');
+    }
+    
+    if (isAdmin || isSupervisor) {
+      return [...baseItems, { to: '/usuarios', label: 'Usuarios', icon: UserRound }];
+    }
+    
+    return baseItems;
+  };
+
+  const items = getNavItems();
 
   return (
     <div className="min-h-screen bg-[#FAF7F3] text-[#1F1F1F]">

@@ -83,6 +83,7 @@ export function DateControl({
 }) {
   const [open, setOpen] = useState(false);
   const selectedDate = value ? new Date(`${value}T00:00:00`) : null;
+  const [inputValue, setInputValue] = useState(value ? formatDisplayDate(value) : '');
   const [viewDate, setViewDate] = useState(selectedDate ?? new Date());
   const rootRef = useRef<HTMLDivElement | null>(null);
   const minDate = min ? new Date(`${min}T00:00:00`) : null;
@@ -95,10 +96,6 @@ export function DateControl({
     ...Array.from({ length: startOffset }, () => null),
     ...Array.from({ length: daysInMonth }, (_, index) => index + 1),
   ];
-  const label = selectedDate
-    ? new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(selectedDate)
-    : placeholder;
-
   useEffect(() => {
     const onPointerDown = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
@@ -107,23 +104,67 @@ export function DateControl({
     return () => window.removeEventListener('pointerdown', onPointerDown);
   }, []);
 
+  useEffect(() => {
+    setInputValue(value ? formatDisplayDate(value) : '');
+    if (value) setViewDate(new Date(`${value}T00:00:00`));
+  }, [value]);
+
+  const commitInput = (nextValue: string) => {
+    const formatted = formatDateInput(nextValue);
+    setInputValue(formatted);
+
+    if (!formatted) {
+      onChange('');
+      return;
+    }
+
+    if (formatted.length !== 10) return;
+
+    const iso = parseDisplayDate(formatted);
+    if (!iso) return;
+
+    const candidate = new Date(`${iso}T00:00:00`);
+    if (minDate && candidate < minDate) return;
+
+    onChange(iso);
+    setViewDate(candidate);
+  };
+
   const pickDay = (day: number) => {
     const picked = new Date(year, month, day);
     const iso = `${picked.getFullYear()}-${String(picked.getMonth() + 1).padStart(2, '0')}-${String(picked.getDate()).padStart(2, '0')}`;
     onChange(iso);
+    setInputValue(formatDisplayDate(iso));
     setOpen(false);
   };
 
   return (
     <div ref={rootRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        className="flex h-12 w-full items-center justify-between gap-3 rounded-[14px] border border-[#E8D8CC] bg-[#FFFCFA] px-4 text-left text-sm font-semibold text-[#1F1F1F] outline-none transition hover:border-[#FFB48A] focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70"
-      >
-        <span className={value ? '' : 'text-[#8A7F78]'}>{label}</span>
-        <Calendar className="h-4 w-4 text-[#6B625C]" aria-hidden="true" />
-      </button>
+      <div className="flex h-12 w-full items-center gap-3 rounded-[14px] border border-[#E8D8CC] bg-[#FFFCFA] px-4 text-sm font-semibold text-[#1F1F1F] transition hover:border-[#FFB48A] focus-within:border-[#FF7A1A] focus-within:ring-4 focus-within:ring-[#FFE2CC]/70">
+        <input
+          type="text"
+          inputMode="numeric"
+          value={inputValue}
+          onChange={(event) => commitInput(event.target.value)}
+          onFocus={() => setOpen(true)}
+          onBlur={() => {
+            if (inputValue && (inputValue.length !== 10 || !parseDisplayDate(inputValue))) {
+              setInputValue(value ? formatDisplayDate(value) : '');
+            }
+          }}
+          placeholder={placeholder === 'Seleccionar fecha' ? 'dd/mm/aaaa' : placeholder}
+          maxLength={10}
+          className="h-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-[#8A7F78]"
+        />
+        <button
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          title="Abrir calendario"
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] text-[#6B625C] transition hover:bg-[#FFF2E7] hover:text-[#C94A00]"
+        >
+          <Calendar className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
 
       {open && (
         <div className="absolute left-0 top-[calc(100%+0.45rem)] z-50 w-[292px] rounded-[16px] border border-[#E8D8CC] bg-white p-3 shadow-[0_18px_45px_rgba(91,47,20,0.16)]">
@@ -179,6 +220,39 @@ export function DateControl({
       )}
     </div>
   );
+}
+
+function formatDisplayDate(isoDate: string) {
+  const [year, month, day] = isoDate.split('-');
+  if (!year || !month || !day) return '';
+  return `${day}/${month}/${year}`;
+}
+
+function formatDateInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+function parseDisplayDate(value: string) {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  if (!match) return null;
+
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 export function FieldError({ message }: { message?: string }) {

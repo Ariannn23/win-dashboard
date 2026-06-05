@@ -2,7 +2,7 @@ import { Edit3, Eye, History, MoreHorizontal, RefreshCw, Wifi } from 'lucide-rea
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { initials } from '@/shared/lib/format';
-import { canEditSale } from '@/shared/lib/permissions';
+import { canChangeStatus, canEditSale } from '@/shared/lib/permissions';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { PAGE_SIZE, Pagination } from '@/shared/ui/Pagination';
 import type { Profile, Sale } from '@/types';
@@ -134,14 +134,16 @@ export function SalesTable({ sales, profiles, user, onEdit, onStatus, onView, on
                             }}
                           />
                         )}
-                        <ActionItem
-                          icon={RefreshCw}
-                          label="Actualizar estado"
-                          onClick={() => {
-                            setOpenMenuId(null);
-                            onStatus(sale);
-                          }}
-                        />
+                        {canChangeStatus(user) && (
+                          <ActionItem
+                            icon={RefreshCw}
+                            label="Actualizar estado"
+                            onClick={() => {
+                              setOpenMenuId(null);
+                              onStatus(sale);
+                            }}
+                          />
+                        )}
                       </div>
                     )}
                   </div>

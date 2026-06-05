@@ -14,7 +14,22 @@ import { UsersPage } from '@/pages/UsersPage';
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  return children;
+  return <>{children}</>;
+}
+
+function RoleRoute({ element, blockedRoles }: { element: React.ReactNode; blockedRoles?: string[] }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (blockedRoles && blockedRoles.includes(user.rol)) {
+    return <Navigate to="/ventas" replace />;
+  }
+  return <>{element}</>;
+}
+
+function IndexRoute() {
+  const { user } = useAuth();
+  if (user?.rol === 'ASESOR') return <Navigate to="/ventas" replace />;
+  return <Navigate to="/dashboard" replace />;
 }
 
 const router = createBrowserRouter([
@@ -30,15 +45,15 @@ const router = createBrowserRouter([
       </RequireAuth>
     ),
     children: [
-      { index: true, element: <Navigate to="/dashboard" replace /> },
-      { path: 'dashboard', element: <DashboardPage /> },
-      { path: 'clientes', element: <ClientsPage /> },
+      { index: true, element: <IndexRoute /> },
+      { path: 'dashboard', element: <RoleRoute element={<DashboardPage />} blockedRoles={['ASESOR']} /> },
+      { path: 'clientes', element: <RoleRoute element={<ClientsPage />} blockedRoles={['ASESOR']} /> },
       { path: 'ventas', element: <SalesPage /> },
-      { path: 'planes', element: <PlansPage /> },
-      { path: 'reportes', element: <ReportsPage /> },
-      { path: 'historial', element: <HistoryPage /> },
-      { path: 'usuarios', element: <UsersPage /> },
-      { path: 'configuracion', element: <SettingsPage /> },
+      { path: 'planes', element: <RoleRoute element={<PlansPage />} blockedRoles={['ASESOR', 'SUPERVISOR', 'BACK']} /> },
+      { path: 'reportes', element: <RoleRoute element={<ReportsPage />} blockedRoles={['ASESOR']} /> },
+      { path: 'historial', element: <RoleRoute element={<HistoryPage />} blockedRoles={['ASESOR']} /> },
+      { path: 'usuarios', element: <RoleRoute element={<UsersPage />} blockedRoles={['ASESOR', 'BACK']} /> },
+      { path: 'configuracion', element: <RoleRoute element={<SettingsPage />} blockedRoles={['ASESOR']} /> },
     ],
   },
 ]);

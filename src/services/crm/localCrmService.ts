@@ -44,7 +44,7 @@ function assertNextStatus(current: SaleStatus, next: SaleStatus) {
   const currentIndex = STATUS_ORDER.indexOf(current);
   const nextIndex = STATUS_ORDER.indexOf(next);
   const isAlternative = next === 'RECHAZADO' || next === 'CANCELADO';
-  const isForwardStep = currentIndex >= 0 && nextIndex > currentIndex;
+  const isForwardStep = currentIndex >= 0 && nextIndex === currentIndex + 1;
 
   if (!isAlternative && !isForwardStep && next !== current) {
     throw new Error('El estado debe avanzar segun el flujo permitido');

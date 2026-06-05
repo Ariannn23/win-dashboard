@@ -1,5 +1,5 @@
-import { Calendar, ChevronLeft, ChevronRight, Download, Eye, Search, Users, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Calendar, ChevronRight, Download, Eye, Search, Users, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useCrm } from '@/app/providers/CrmProvider';
 import { ROLE_LABELS, STATUS_LABELS } from '@/shared/lib/constants';
@@ -7,6 +7,7 @@ import { formatDateOnly, formatTimeOnly, initials } from '@/shared/lib/format';
 import { canViewSale } from '@/shared/lib/permissions';
 import { ComboBox, DateControl, type SelectOption } from '@/shared/ui/FormControls';
 import { Modal } from '@/shared/ui/Modal';
+import { PAGE_SIZE, Pagination } from '@/shared/ui/Pagination';
 import { PageSkeleton } from '@/shared/ui/Skeleton';
 import type { Profile, Role, Sale, SaleStatus, StatusHistory } from '@/types';
 
@@ -76,7 +77,6 @@ export function HistoryPage() {
   const [statusFilter, setStatusFilter] = useState<SaleStatus | 'TODOS'>('TODOS');
   const [page, setPage] = useState(1);
   const [selectedRow, setSelectedRow] = useState<{ item: StatusHistory; sale: Sale | undefined; role: Role } | null>(null);
-  const pageSize = 8;
 
   if (isLoading) return <PageSkeleton cards={5} tableRows={8} tableColumns={8} />;
 
@@ -117,6 +117,10 @@ export function HistoryPage() {
     });
   }, [dateFrom, dateTo, enrichedRows, query, statusFilter, userFilter]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [dateFrom, dateTo, moduleFilter, query, statusFilter, userFilter]);
+
   const totalEvents = enrichedRows.length;
   const uniqueUsers = new Set(enrichedRows.map((row) => row.item.usuario_id)).size;
   const statusChanges = enrichedRows.length;
@@ -134,9 +138,9 @@ export function HistoryPage() {
       }).length
     : 0;
 
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const pagedRows = filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const pagedRows = filteredRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const clearFilters = () => {
     setQuery('');
@@ -359,63 +363,7 @@ export function HistoryPage() {
           </table>
         </div>
 
-        <div className="flex flex-col items-center justify-between gap-3 border-t border-[#F3EAE3] bg-[#FFFCFA] px-5 py-4 sm:flex-row">
-          <p className="text-xs font-semibold text-[#6B625C]">
-            {filteredRows.length === 0 ? (
-              'Sin eventos para mostrar'
-            ) : totalPages === 1 ? (
-              <>
-                Mostrando <span className="font-extrabold text-[#1F1F1F]">{filteredRows.length}</span>{' '}
-                {filteredRows.length === 1 ? 'evento' : 'eventos'}
-              </>
-            ) : (
-              <>
-                Mostrando{' '}
-                <span className="font-extrabold text-[#1F1F1F]">
-                  {(currentPage - 1) * pageSize + 1}
-                </span>{' '}
-                a{' '}
-                <span className="font-extrabold text-[#1F1F1F]">
-                  {Math.min(currentPage * pageSize, filteredRows.length)}
-                </span>{' '}
-                de <span className="font-extrabold text-[#1F1F1F]">{filteredRows.length}</span> eventos
-              </>
-            )}
-          </p>
-          <div className="flex items-center gap-1">
-            <PageButton
-              disabled={currentPage === 1}
-              onClick={() => setPage((value) => Math.max(1, value - 1))}
-              ariaLabel="Pagina anterior"
-            >
-              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-            </PageButton>
-            {Array.from({ length: totalPages }, (_, index) => index + 1)
-              .slice(0, 5)
-              .map((pageNumber) => (
-                <button
-                  key={pageNumber}
-                  type="button"
-                  onClick={() => setPage(pageNumber)}
-                  className={`h-9 min-w-9 rounded-[10px] px-3 text-xs font-extrabold transition ${
-                    pageNumber === currentPage
-                      ? 'bg-gradient-to-r from-[#F24A00] to-[#C94A00] text-white shadow-[0_10px_18px_rgba(201,74,0,0.22)]'
-                      : 'text-[#6B625C] hover:bg-[#FFF2E7]'
-                  }`}
-                >
-                  {pageNumber}
-                </button>
-              ))}
-            {totalPages > 5 && <span className="px-1 text-xs font-bold text-[#8A7F78]">...</span>}
-            <PageButton
-              disabled={currentPage === totalPages}
-              onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
-              ariaLabel="Pagina siguiente"
-            >
-              <ChevronRight className="h-4 w-4" aria-hidden="true" />
-            </PageButton>
-          </div>
-        </div>
+        <Pagination page={currentPage} totalItems={filteredRows.length} itemLabel="eventos" onPageChange={setPage} />
       </section>
 
       <HistoryDetailModal row={selectedRow} onClose={() => setSelectedRow(null)} />
@@ -574,29 +522,5 @@ function DetailItem({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#8A7F78]">{label}</p>
       <p className="mt-1 text-sm font-extrabold text-[#1F1F1F]">{value}</p>
     </div>
-  );
-}
-
-function PageButton({
-  children,
-  onClick,
-  disabled,
-  ariaLabel,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-  ariaLabel: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={ariaLabel}
-      className="grid h-9 w-9 place-items-center rounded-[10px] text-[#6B625C] transition hover:bg-[#FFF2E7] disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      {children}
-    </button>
   );
 }

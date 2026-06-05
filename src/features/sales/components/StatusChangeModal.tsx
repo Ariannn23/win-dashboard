@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { FINAL_STATUSES, STATUS_LABELS, STATUS_ORDER } from '@/shared/lib/constants';
 import { initials } from '@/shared/lib/format';
 import { planBasePriceLabel } from '@/shared/lib/sales';
-import { DateControl } from '@/shared/ui/FormControls';
+import { DateControl, FieldError } from '@/shared/ui/FormControls';
 import { Modal } from '@/shared/ui/Modal';
 import type { Sale, SaleStatus } from '@/types';
 
@@ -11,6 +11,12 @@ interface StatusChangeModalProps {
   sale: Sale;
   onClose: () => void;
   onSubmit: (nextStatus: SaleStatus, comment: string) => void | Promise<void>;
+}
+
+interface StatusChangeErrors {
+  status?: string;
+  comment?: string;
+  followUpDate?: string;
 }
 
 function simpleStatus(status: SaleStatus) {
@@ -25,26 +31,47 @@ function statusTone(status: SaleStatus) {
 }
 
 function statusDescription(status: SaleStatus, currentStatus: SaleStatus) {
+  if (status === 'PROGRAMADO_GRABACION') return 'Agenda la grabacion con el cliente.';
+  if (status === 'GRABADO') return 'Confirma que la grabacion fue completada.';
+  if (status === 'PROGRAMADO_INSTALACION') return 'Agenda la instalacion del servicio.';
   if (status === 'INSTALADO') return 'Cierra la venta como completada.';
   if (status === 'RECHAZADO') return 'Marca la venta como no aprobada.';
   if (status === 'CANCELADO') return 'Detiene el flujo de la venta.';
+  return currentStatus ? 'Siguiente paso del flujo.' : 'Cambio de estado.';
+}
+
+function nextAllowedStatuses(currentStatus: SaleStatus): SaleStatus[] {
+  if (FINAL_STATUSES.includes(currentStatus)) return [];
 
   const currentIndex = STATUS_ORDER.indexOf(currentStatus);
-  const nextIndex = STATUS_ORDER.indexOf(status);
-  if (currentIndex >= 0 && nextIndex === currentIndex + 1) return 'Siguiente paso recomendado.';
-  return 'Avanza saltando pasos intermedios.';
+  const nextStep = currentIndex >= 0 ? STATUS_ORDER[currentIndex + 1] : undefined;
+  const statuses = [nextStep, 'RECHAZADO', 'CANCELADO'].filter(Boolean) as SaleStatus[];
+  return Array.from(new Set(statuses));
+}
+
+function requiresFollowUpDate(status: SaleStatus) {
+  return status === 'PROGRAMADO_GRABACION' || status === 'PROGRAMADO_INSTALACION';
+}
+
+function requiresComment(status: SaleStatus) {
+  return status === 'RECHAZADO' || status === 'CANCELADO';
+}
+
+function formatAuditDate(value: string) {
+  if (!value) return '';
+  const [year, month, day] = value.split('-');
+  return `${day}/${month}/${year}`;
 }
 
 export function StatusChangeModal({ sale, onClose, onSubmit }: StatusChangeModalProps) {
   const options = useMemo(() => {
-    if (FINAL_STATUSES.includes(sale.estado)) return [];
-    const currentIndex = STATUS_ORDER.indexOf(sale.estado);
-    const nextFlow = currentIndex >= 0 ? STATUS_ORDER.slice(currentIndex + 1) : [];
-    return [...nextFlow, 'RECHAZADO', 'CANCELADO'].filter(Boolean) as SaleStatus[];
+    return nextAllowedStatuses(sale.estado);
   }, [sale.estado]);
   const [status, setStatus] = useState<SaleStatus>(options[0] ?? sale.estado);
   const [comment, setComment] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
+  const [errors, setErrors] = useState<StatusChangeErrors>({});
+  const [submitting, setSubmitting] = useState(false);
 
   const planPrice = planBasePriceLabel(sale.plan_contratar);
   const currentFlowIndex = STATUS_ORDER.indexOf(sale.estado);
@@ -52,6 +79,53 @@ export function StatusChangeModal({ sale, onClose, onSubmit }: StatusChangeModal
   const isCompleting = status === 'INSTALADO';
   const isSkippingFlow = currentFlowIndex >= 0 && targetFlowIndex > currentFlowIndex + 1;
   const today = new Date().toISOString().slice(0, 10);
+  const selectedRequiresDate = requiresFollowUpDate(status);
+  const selectedRequiresComment = requiresComment(status);
+
+  const validate = () => {
+    const nextErrors: StatusChangeErrors = {};
+
+    if (!options.includes(status)) {
+      nextErrors.status = 'Selecciona un estado valido para continuar.';
+    }
+
+    if (selectedRequiresComment && comment.trim().length < 10) {
+      nextErrors.comment = 'Agrega un comentario de al menos 10 caracteres para cerrar el flujo.';
+    }
+
+    if (comment.trim().length > 300) {
+      nextErrors.comment = 'El comentario no puede superar los 300 caracteres.';
+    }
+
+    if (selectedRequiresDate && !followUpDate) {
+      nextErrors.followUpDate = 'Selecciona una fecha de seguimiento.';
+    }
+
+    if (followUpDate && followUpDate < today) {
+      nextErrors.followUpDate = 'La fecha no puede ser anterior a hoy.';
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
+
+    const auditComment = [
+      comment.trim() || `Cambio a ${STATUS_LABELS[status]}`,
+      followUpDate ? `Seguimiento: ${formatAuditDate(followUpDate)}` : '',
+    ]
+      .filter(Boolean)
+      .join(' | ');
+
+    setSubmitting(true);
+    try {
+      await onSubmit(status, auditComment);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <Modal
@@ -112,7 +186,7 @@ export function StatusChangeModal({ sale, onClose, onSubmit }: StatusChangeModal
                     <div>
                       <span className="text-sm font-semibold uppercase text-[#4B3024]">Seleccionar nuevo estado</span>
                       <p className="mt-1 text-sm font-semibold text-[#8A6B5A]">
-                        Puedes avanzar al siguiente paso o cerrar el flujo como instalado.
+                        Puedes avanzar solo al siguiente paso permitido o cerrar el flujo.
                       </p>
                     </div>
                     {isCompleting && (
@@ -130,10 +204,14 @@ export function StatusChangeModal({ sale, onClose, onSubmit }: StatusChangeModal
                         status={option}
                         active={status === option}
                         currentStatus={sale.estado}
-                        onSelect={() => setStatus(option)}
+                        onSelect={() => {
+                          setStatus(option);
+                          setErrors((current) => ({ ...current, status: undefined }));
+                        }}
                       />
                     ))}
                   </div>
+                  <FieldError message={errors.status} />
 
                   {isSkippingFlow && (
                     <div className="mt-3 rounded-[14px] border border-[#FFE1A8] bg-[#FFF8E6] px-4 py-3 text-sm font-semibold text-[#8A5B00]">
@@ -145,19 +223,30 @@ export function StatusChangeModal({ sale, onClose, onSubmit }: StatusChangeModal
                 <label className="block">
                   <span className="flex items-center justify-between text-sm font-semibold uppercase text-[#4B3024]">
                     Comentario de actualizacion
-                    <span className="font-semibold text-[#8A7F78]">{comment.length}/300</span>
+                    <span className="font-semibold text-[#8A7F78]">
+                      {selectedRequiresComment ? 'Obligatorio' : 'Opcional'} · {comment.length}/300
+                    </span>
                   </span>
                   <textarea
                     maxLength={300}
                     value={comment}
-                    onChange={(event) => setComment(event.target.value)}
+                    onChange={(event) => {
+                      setComment(event.target.value);
+                      setErrors((current) => ({ ...current, comment: undefined }));
+                    }}
                     placeholder="Describe el motivo del cambio de estado..."
                     className="mt-3 min-h-[128px] w-full rounded-[15px] border border-[#E8D8CC] bg-white px-5 py-4 text-base font-semibold text-[#1F1F1F] outline-none transition placeholder:text-[#8A7F78] focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70"
                   />
+                  <FieldError message={errors.comment} />
                 </label>
 
                 <label className="block">
-                  <span className="text-sm font-semibold uppercase text-[#4B3024]">Fecha de proximo seguimiento</span>
+                  <span className="flex items-center justify-between text-sm font-semibold uppercase text-[#4B3024]">
+                    Fecha de proximo seguimiento
+                    <span className="font-semibold normal-case text-[#8A7F78]">
+                      {selectedRequiresDate ? 'Obligatoria' : 'Opcional'}
+                    </span>
+                  </span>
                   <div className="mt-3 overflow-hidden rounded-[16px] border border-[#E8D8CC] bg-white transition focus-within:border-[#FF7A1A] focus-within:ring-4 focus-within:ring-[#FFE2CC]/70">
                     <div className="flex items-center gap-4 px-5 py-4">
                       <div className="grid h-11 w-11 shrink-0 place-items-center rounded-[13px] bg-[#FFF2E7] text-[#C94A00]">
@@ -168,11 +257,19 @@ export function StatusChangeModal({ sale, onClose, onSubmit }: StatusChangeModal
                           {followUpDate ? 'Fecha seleccionada' : 'Sin fecha seleccionada'}
                         </p>
                         <div className="mt-2">
-                          <DateControl value={followUpDate} onChange={setFollowUpDate} min={today} />
+                          <DateControl
+                            value={followUpDate}
+                            onChange={(value) => {
+                              setFollowUpDate(value);
+                              setErrors((current) => ({ ...current, followUpDate: undefined }));
+                            }}
+                            min={today}
+                          />
                         </div>
                       </div>
                     </div>
                   </div>
+                  <FieldError message={errors.followUpDate} />
                   <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-[#8A6B5A]">
                     <Info className="h-4 w-4" aria-hidden="true" />
                     Se generara una tarea automatica en el calendario del asesor.
@@ -201,11 +298,11 @@ export function StatusChangeModal({ sale, onClose, onSubmit }: StatusChangeModal
           </button>
           <button
             type="button"
-            disabled={!options.length}
-            onClick={() => onSubmit(status, comment)}
+            disabled={!options.length || submitting}
+            onClick={handleSubmit}
             className="h-12 min-w-[220px] rounded-[15px] bg-gradient-to-r from-[#F24A00] to-[#C94A00] px-6 text-sm font-semibold text-white shadow-[0_14px_22px_rgba(201,74,0,0.22)] disabled:cursor-not-allowed disabled:bg-none disabled:bg-[#D8CCC4] disabled:shadow-none"
           >
-            Confirmar cambio
+            {submitting ? 'Guardando...' : 'Confirmar cambio'}
           </button>
         </div>
     </Modal>

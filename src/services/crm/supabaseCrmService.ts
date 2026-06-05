@@ -59,6 +59,17 @@ function salePayload(payload: SaleUpsertPayload) {
   };
 }
 
+function crmErrorMessage(message: string) {
+  const messages: Record<string, string> = {
+    solo_back_admin_cambia_estados: 'Solo Admin o Back office pueden cambiar estados.',
+    flujo_estado_invalido: 'El estado debe avanzar al siguiente paso permitido o cerrar el flujo.',
+    venta_no_encontrada: 'Venta no encontrada.',
+    usuario_sin_perfil: 'Tu usuario no tiene un perfil activo.',
+  };
+
+  return messages[message] ?? message;
+}
+
 async function loadHistory(snapshotProfiles: Profile[]) {
   const client = requireSupabase();
   const { data, error } = await client
@@ -99,7 +110,7 @@ export const supabaseCrmService: CrmDataService = {
       .select('*')
       .single();
 
-    if (error) throw error;
+    if (error) throw new Error(crmErrorMessage(error.message));
     return data as Sale;
   },
 
@@ -117,7 +128,7 @@ export const supabaseCrmService: CrmDataService = {
       p_comentario: comentario,
     });
 
-    if (error) throw error;
+    if (error) throw new Error(crmErrorMessage(error.message));
 
     const { data: latestHistory, error: historyError } = await client
       .from('historial_estados')

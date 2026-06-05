@@ -90,8 +90,33 @@ export function SaleDetailPanel({ sale, profiles, onClose }: SaleDetailPanelProp
           <TextBlock label="Observaciones" value={sale.observaciones || 'Sin observaciones'} />
           <TextBlock label="Observaciones Back Office" value={sale.observaciones_back || 'Sin observaciones internas'} />
         </section>
+
+        {(sale.foto_dni || sale.foto_recibo || sale.foto_selfie) && (
+          <section className="rounded-[20px] border border-[#EDE4DC] bg-white p-5">
+            <h3 className="flex items-center gap-3 text-lg font-extrabold text-[#A32800]">
+              <UserRound className="h-5 w-5" aria-hidden="true" />
+              Documentos adjuntos
+            </h3>
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              {sale.foto_dni && <ImagePreview label="Foto DNI" url={sale.foto_dni} />}
+              {sale.foto_recibo && <ImagePreview label="Foto Recibo" url={sale.foto_recibo} />}
+              {sale.foto_selfie && <ImagePreview label="Foto Selfie" url={sale.foto_selfie} />}
+            </div>
+          </section>
+        )}
       </div>
     </Modal>
+  );
+}
+
+function ImagePreview({ label, url }: { label: string; url: string }) {
+  return (
+    <article className="rounded-[18px] border border-[#EDE4DC] bg-white p-4">
+      <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-[#8A7F78] mb-2">{label}</p>
+      <a href={url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-[12px] border border-[#E8D8CC] hover:opacity-80 transition-opacity">
+        <img src={url} alt={label} className="w-full h-32 object-cover" />
+      </a>
+    </article>
   );
 }
 

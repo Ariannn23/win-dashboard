@@ -8,6 +8,7 @@ import {
   TrendingUp,
   UsersRound,
 } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useCrm } from '@/app/providers/CrmProvider';
@@ -36,6 +37,53 @@ const chartBars = [
   { label: 'Sab', value: 66, target: 104 },
   { label: 'Dom', value: 80, target: 96 },
 ];
+
+type ObjectiveMode = 'daily' | 'monthly';
+
+const monthLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+function startOfDay(date: Date) {
+  const copy = new Date(date);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+function sameDay(a: Date, b: Date) {
+  return startOfDay(a).getTime() === startOfDay(b).getTime();
+}
+
+function latestSalesDate(sales: Sale[]) {
+  return sales.reduce<Date>((latest, sale) => {
+    const created = new Date(sale.created_at);
+    return created > latest ? created : latest;
+  }, new Date());
+}
+
+function buildObjectiveRows(sales: Sale[], mode: ObjectiveMode) {
+  if (mode === 'daily') {
+    const anchor = latestSalesDate(sales);
+    const start = startOfDay(new Date(anchor));
+    start.setDate(start.getDate() - 6);
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      const value = sales.filter((sale) => sameDay(new Date(sale.created_at), date)).length;
+      const fallback = chartBars[index];
+      const target = Math.max(value + 2, Math.ceil((sales.length || 14) / 6), 4);
+      return { label: fallback.label, caption: `${date.getDate()}/${date.getMonth() + 1}`, value, target };
+    });
+  }
+
+  const year = latestSalesDate(sales).getFullYear();
+  return monthLabels.map((label, index) => {
+    const value = sales.filter((sale) => {
+      const created = new Date(sale.created_at);
+      return created.getFullYear() === year && created.getMonth() === index;
+    }).length;
+    const target = Math.max(value + 4, Math.ceil((sales.length || 24) / 8));
+    return { label, caption: String(year), value, target };
+  });
+}
 
 export function DashboardPage() {
   const { user } = useAuth();
@@ -125,10 +173,10 @@ export function DashboardPage() {
         </div>
 
         {sidebarCollapsed ? (
-          <SalesObjectiveCard sidebarCollapsed={sidebarCollapsed} />
+          <SalesObjectiveCard sidebarCollapsed={sidebarCollapsed} sales={sales} />
         ) : (
           <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
-            <SalesObjectiveCard sidebarCollapsed={sidebarCollapsed} />
+            <SalesObjectiveCard sidebarCollapsed={sidebarCollapsed} sales={sales} />
             <OperationalSummaryCard stats={stats} monthlyAmount={monthlyAmount} />
           </div>
         )}
@@ -309,37 +357,46 @@ function DashboardMetric({
   );
 }
 
-function SalesObjectiveCard({ sidebarCollapsed }: { sidebarCollapsed: boolean }) {
-  const totalValue = chartBars.reduce((total, bar) => total + bar.value, 0);
-  const totalTarget = chartBars.reduce((total, bar) => total + bar.target, 0);
-  const weeklyProgress = Math.round((totalValue / totalTarget) * 100);
-  const bestDay = chartBars.slice().sort((a, b) => b.value / b.target - a.value / a.target)[0];
+function SalesObjectiveCard({ sidebarCollapsed, sales }: { sidebarCollapsed: boolean; sales: Sale[] }) {
+  const [mode, setMode] = useState<ObjectiveMode>('daily');
+  const rows = useMemo(() => buildObjectiveRows(sales, mode), [mode, sales]);
+  const totalValue = rows.reduce((total, bar) => total + bar.value, 0);
+  const totalTarget = rows.reduce((total, bar) => total + bar.target, 0);
+  const progress = totalTarget ? Math.round((totalValue / totalTarget) * 100) : 0;
   const remaining = Math.max(0, totalTarget - totalValue);
+  const titleDetail = mode === 'daily' ? 'Rendimiento diario por activaciones.' : 'Rendimiento mensual por activaciones.';
 
   return (
-    <section className="rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.055)]">
+    <section className="flex h-full flex-col rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.055)]">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-base font-extrabold text-[#1F1F1F]">Ventas vs Objetivos</h2>
-          <p className="mt-1 text-sm font-semibold text-[#6B625C]">Rendimiento semanal por activaciones.</p>
+          <p className="mt-1 text-sm font-semibold text-[#6B625C]">{titleDetail}</p>
         </div>
         <div className="flex rounded-[15px] bg-[#FFF2E7] p-1">
-          <button
-            className="rounded-[10px] bg-white px-3 py-1.5 text-xs font-extrabold text-[#C94A00] shadow-sm"
-            type="button"
-          >
-            Mensual
-          </button>
-          <button className="px-3 py-1.5 text-xs font-bold text-[#6B625C]" type="button">
-            Anual
-          </button>
+          {[
+            { value: 'daily', label: 'Diario' },
+            { value: 'monthly', label: 'Mensual' },
+          ].map((option) => (
+            <button
+              key={option.value}
+              className={`rounded-[10px] px-3 py-1.5 text-xs transition ${
+                mode === option.value
+                  ? 'bg-white font-extrabold text-[#C94A00] shadow-sm'
+                  : 'font-bold text-[#6B625C] hover:text-[#C94A00]'
+              }`}
+              type="button"
+              onClick={() => setMode(option.value as ObjectiveMode)}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className={`${sidebarCollapsed ? 'mt-6' : 'mt-5'} grid gap-5 xl:grid-cols-[1fr_170px]`}>
-        <div>
-          <div className={`${sidebarCollapsed ? 'h-[230px]' : 'h-[190px]'} flex items-end justify-between gap-4 rounded-[18px] bg-[#FFFCFA] px-4 pb-3 pt-5`}>
-            {chartBars.map((bar) => {
+      <div className={`${sidebarCollapsed ? 'mt-6' : 'mt-5'} flex flex-1 flex-col`}>
+        <div className={`${sidebarCollapsed ? 'h-[250px]' : 'h-[220px]'} flex items-end justify-between gap-3 rounded-[18px] bg-[#FFFCFA] px-4 pb-3 pt-5`}>
+            {rows.map((bar) => {
               const progress = Math.min(100, Math.round((bar.value / bar.target) * 100));
               return (
                 <div key={bar.label} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
@@ -361,51 +418,61 @@ function SalesObjectiveCard({ sidebarCollapsed }: { sidebarCollapsed: boolean })
                 </div>
               );
             })}
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <ObjectiveMiniStat label="Avance semana" value={`${weeklyProgress}%`} tone="orange" />
-            <ObjectiveMiniStat label="Mejor dia" value={bestDay.label} detail={`${Math.round((bestDay.value / bestDay.target) * 100)}%`} tone="green" />
-            <ObjectiveMiniStat label="Faltan" value={remaining} detail="ventas" tone="muted" />
-          </div>
         </div>
-        <div className="rounded-[18px] border border-[#F1DAC8] bg-[#FFF8F3] p-4">
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#8A7F78]">Resumen</p>
-          <p className="mt-2 text-3xl font-extrabold tracking-[-0.04em] text-[#1F1F1F]">{totalValue}</p>
-          <p className="text-xs font-bold text-[#6B625C]">ventas de {totalTarget} objetivo</p>
-          <div className="mt-4 h-3 overflow-hidden rounded-full bg-white">
-            <div className="h-full rounded-full bg-gradient-to-r from-[#D83A00] to-[#FF7A1A]" style={{ width: `${weeklyProgress}%` }} />
-          </div>
-          <p className="mt-4 text-xs font-semibold leading-5 text-[#6B625C]">
-            El contraste muestra el 100% disponible en claro y el avance real en naranja.
-          </p>
-        </div>
+        <ObjectiveSummaryFooter
+          progress={progress}
+          remaining={remaining}
+          totalTarget={totalTarget}
+          totalValue={totalValue}
+          periods={rows.length}
+        />
       </div>
     </section>
   );
 }
 
-function ObjectiveMiniStat({
-  label,
-  value,
-  detail,
-  tone,
+function ObjectiveSummaryFooter({
+  progress,
+  remaining,
+  totalTarget,
+  totalValue,
+  periods,
 }: {
-  label: string;
-  value: number | string;
-  detail?: string;
-  tone: 'orange' | 'green' | 'muted';
+  progress: number;
+  remaining: number;
+  totalTarget: number;
+  totalValue: number;
+  periods: number;
 }) {
-  const tones = {
-    orange: 'bg-[#FFF2E7] text-[#C94A00]',
-    green: 'bg-[#E9FFF2] text-[#2FA66A]',
-    muted: 'bg-[#F3EAE3] text-[#6B625C]',
-  };
   return (
-    <div className="rounded-[15px] border border-[#F1DAC8] bg-white px-4 py-3">
-      <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#8A7F78]">{label}</p>
-      <div className="mt-1 flex items-end gap-2">
-        <span className="text-lg font-extrabold text-[#1F1F1F]">{value}</span>
-        {detail && <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${tones[tone]}`}>{detail}</span>}
+    <div className="mt-4 grid gap-3 rounded-[18px] border border-[#F1DAC8] bg-[#FFF8F3] p-3 lg:grid-cols-[180px_1fr_180px] lg:items-center">
+      <div className="rounded-[14px] bg-white px-4 py-3">
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#8A7F78]">Resumen</p>
+        <p className="mt-1 text-2xl font-extrabold tracking-[-0.03em] text-[#1F1F1F]">{totalValue}</p>
+        <p className="text-xs font-bold text-[#6B625C]">ventas de {totalTarget} objetivo</p>
+      </div>
+
+      <div className="rounded-[14px] bg-white px-4 py-3">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs font-semibold leading-5 text-[#6B625C]">
+            El fondo claro marca el 100% disponible y el naranja muestra el avance real.
+          </p>
+          <span className="shrink-0 text-lg font-extrabold text-[#C94A00]">{progress}%</span>
+        </div>
+        <div className="mt-3 h-3 overflow-hidden rounded-full bg-[#F3EAE3]">
+          <div className="h-full rounded-full bg-gradient-to-r from-[#D83A00] to-[#FF7A1A]" style={{ width: `${Math.min(progress, 100)}%` }} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <span className="rounded-[14px] bg-white px-4 py-3 text-center text-sm font-extrabold text-[#4B3024]">
+          {periods}
+          <small className="mt-0.5 block text-[11px] text-[#6B625C]">periodos</small>
+        </span>
+        <span className="rounded-[14px] bg-white px-4 py-3 text-center text-sm font-extrabold text-[#C94A00]">
+          {remaining}
+          <small className="mt-0.5 block text-[11px] text-[#C94A00]">faltan</small>
+        </span>
       </div>
     </div>
   );

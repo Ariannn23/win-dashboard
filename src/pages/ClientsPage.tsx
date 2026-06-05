@@ -255,13 +255,6 @@ export function ClientsPage() {
                         >
                           <Eye className="h-4 w-4" aria-hidden="true" />
                         </button>
-                        <button
-                          type="button"
-                          title="Editar cliente"
-                          className="grid h-8 w-8 place-items-center rounded-xl text-[#6B625C] hover:bg-[#FFF2E7] hover:text-[#C94A00]"
-                        >
-                          <Edit3 className="h-4 w-4" aria-hidden="true" />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -382,7 +375,6 @@ function ClientDetailPanel({ sale, onClose }: { sale: Sale; onClose: () => void 
         <section className="rounded-[18px] border border-[#E8D8CC] bg-white p-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#4B3024]">Servicio contratado</p>
-            <button type="button" className="text-xs font-extrabold text-[#C94A00]">Editar</button>
           </div>
           <div className="mt-4 rounded-[16px] border border-[#F1DAC8] p-4">
             <div className="flex items-center gap-3">
@@ -433,10 +425,7 @@ function ClientDetailPanel({ sale, onClose }: { sale: Sale; onClose: () => void 
         </section>
       </div>
 
-      <div className="grid shrink-0 gap-3 border-t border-[#E8D8CC] bg-[#FFFCFA] p-5 sm:grid-cols-2">
-        <button type="button" className="h-11 rounded-[13px] border border-[#F24A00] bg-white text-sm font-extrabold text-[#C94A00]">
-          Editar cliente
-        </button>
+      <div className="grid shrink-0 gap-3 border-t border-[#E8D8CC] bg-[#FFFCFA] p-5 sm:grid-cols-1">
         <button type="button" className="h-11 rounded-[13px] bg-gradient-to-r from-[#F24A00] to-[#C94A00] text-sm font-extrabold text-white shadow-[0_12px_18px_rgba(201,74,0,0.18)]">
           Crear ticket
         </button>

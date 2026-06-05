@@ -11,12 +11,13 @@ import {
   UsersRound,
   WalletCards,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useCrm } from '@/app/providers/CrmProvider';
 import { formatMoney, monthKey, percentChange } from '@/shared/lib/format';
 import { planGroup, saleAmount } from '@/shared/lib/sales';
 import { ComboBox, type SelectOption } from '@/shared/ui/FormControls';
+import { PAGE_SIZE, Pagination } from '@/shared/ui/Pagination';
 import { PageSkeleton } from '@/shared/ui/Skeleton';
 import { useToast } from '@/shared/ui/Toast';
 
@@ -59,6 +60,7 @@ export function ReportsPage() {
   const [advisor, setAdvisor] = useState('TODOS');
   const [district, setDistrict] = useState('TODOS');
   const [monthWindow, setMonthWindow] = useState(Math.floor(now.getMonth() / 3) * 3);
+  const [page, setPage] = useState(1);
 
   if (!user) return null;
   if (isLoading) return <PageSkeleton cards={5} tableRows={5} tableColumns={7} />;
@@ -69,28 +71,27 @@ export function ReportsPage() {
   const supervisors = profiles.filter((profile) => profile.rol === 'SUPERVISOR');
   const advisors = profiles.filter((profile) => profile.rol === 'ASESOR');
 
-  const filteredSales = useMemo(() => {
+  const scopedSales = useMemo(() => {
     return sales.filter((sale) => {
-      const createdMonth = monthKey(new Date(sale.created_at));
-      const matchesMonth = months.includes(createdMonth);
       const matchesSupervisor = supervisor === 'TODOS' || sale.supervisor_id === supervisor;
       const matchesAdvisor = advisor === 'TODOS' || sale.asesor_id === advisor;
       const matchesDistrict = district === 'TODOS' || sale.distrito === district;
-      return matchesMonth && matchesSupervisor && matchesAdvisor && matchesDistrict;
+      return matchesSupervisor && matchesAdvisor && matchesDistrict;
     });
-  }, [advisor, district, months, sales, supervisor]);
+  }, [advisor, district, sales, supervisor]);
+
+  const filteredSales = useMemo(() => {
+    return scopedSales.filter((sale) => months.includes(monthKey(new Date(sale.created_at))));
+  }, [months, scopedSales]);
 
   const previousSales = useMemo(() => {
     const previousKeys = previousMonthKeys(months);
-    return sales.filter((sale) => {
+    return scopedSales.filter((sale) => {
       const createdMonth = monthKey(new Date(sale.created_at));
       const matchesMonth = previousKeys.includes(createdMonth);
-      const matchesSupervisor = supervisor === 'TODOS' || sale.supervisor_id === supervisor;
-      const matchesAdvisor = advisor === 'TODOS' || sale.asesor_id === advisor;
-      const matchesDistrict = district === 'TODOS' || sale.distrito === district;
-      return matchesMonth && matchesSupervisor && matchesAdvisor && matchesDistrict;
+      return matchesMonth;
     });
-  }, [advisor, district, months, sales, supervisor]);
+  }, [months, scopedSales]);
 
   const report = useMemo(() => {
     const totalRevenue = filteredSales.reduce((sum, sale) => sum + saleAmount(sale), 0);
@@ -126,7 +127,7 @@ export function ReportsPage() {
 
   const monthlyRows = useMemo(() => {
     return monthOptions.map((key, index) => {
-      const monthSales = filteredSales.filter((sale) => monthKey(new Date(sale.created_at)) === key);
+      const monthSales = scopedSales.filter((sale) => monthKey(new Date(sale.created_at)) === key);
       const revenue = monthSales.reduce((sum, sale) => sum + saleAmount(sale), 0);
       const completed = monthSales.filter((sale) => sale.estado === 'INSTALADO').length;
       const pending = monthSales.filter((sale) => sale.estado !== 'INSTALADO').length;
@@ -141,7 +142,7 @@ export function ReportsPage() {
         conversion: monthSales.length ? (completed / monthSales.length) * 100 : 0,
       };
     });
-  }, [filteredSales, monthOptions]);
+  }, [monthOptions, scopedSales]);
 
   const selectedMonthRows = monthlyRows.filter((row) => months.includes(row.key));
   const advisorRows = advisors
@@ -170,6 +171,9 @@ export function ReportsPage() {
     .sort((a, b) => b.sales - a.sales);
 
   const exportRows = selectedMonthRows.length ? selectedMonthRows : monthlyRows;
+  const totalPages = Math.max(1, Math.ceil(exportRows.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedExportRows = exportRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const selectedLabel = months
     .slice()
     .sort()
@@ -186,6 +190,10 @@ export function ReportsPage() {
       return [...current, key].sort();
     });
   };
+
+  useEffect(() => {
+    setPage(1);
+  }, [advisor, district, months, reportType, supervisor]);
 
   const exportCsv = () => {
     const header = ['Mes', 'Ventas', 'Clientes nuevos', 'Monto vendido', 'Completadas', 'Pendientes', 'Conversion'];
@@ -368,8 +376,8 @@ export function ReportsPage() {
             <h2 className="text-base font-extrabold text-[#1F1F1F]">Evolucion mensual</h2>
             <span className="text-xs font-extrabold text-[#8A7F78]">{currentYear}</span>
           </div>
-          <div className="mt-5 h-[260px]">
-            <LineChart rows={monthlyRows} selectedMonths={months} />
+          <div className="mt-5">
+            <MonthlyEvolutionChart rows={monthlyRows} selectedMonths={months} />
           </div>
         </article>
 
@@ -427,7 +435,7 @@ export function ReportsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F3EAE3]">
-              {exportRows.map((row) => (
+              {pagedExportRows.map((row) => (
                 <tr key={row.key} className="hover:bg-[#FFFCFA]">
                   <td className="px-5 py-4 font-extrabold text-[#1F1F1F]">{row.label}</td>
                   <td className="px-5 py-4 font-semibold text-[#4B3024]">{row.sales}</td>
@@ -441,6 +449,7 @@ export function ReportsPage() {
             </tbody>
           </table>
         </div>
+        <Pagination page={currentPage} totalItems={exportRows.length} itemLabel="registros" onPageChange={setPage} />
       </section>
     </div>
   );
@@ -557,44 +566,200 @@ function ReportKpi({
   );
 }
 
-function LineChart({ rows, selectedMonths }: { rows: Array<{ key: string; label: string; revenue: number }>; selectedMonths: string[] }) {
-  const max = Math.max(...rows.map((row) => row.revenue), 1);
-  const points = rows
-    .map((row, index) => {
-      const x = (index / Math.max(rows.length - 1, 1)) * 100;
-      const y = 92 - (row.revenue / max) * 82;
-      return `${x},${y}`;
-    })
-    .join(' ');
+type EvolutionMetric = 'sales' | 'revenue';
+
+function MonthlyEvolutionChart({
+  rows,
+  selectedMonths,
+}: {
+  rows: Array<{ key: string; label: string; sales: number; revenue: number; completed: number }>;
+  selectedMonths: string[];
+}) {
+  const [activeMetric, setActiveMetric] = useState<EvolutionMetric>('sales');
+  const [hoveredMonth, setHoveredMonth] = useState<string | null>(null);
+  const totalSales = rows.reduce((sum, row) => sum + row.sales, 0);
+  const totalRevenue = rows.reduce((sum, row) => sum + row.revenue, 0);
+  const values = rows.map((row) => (activeMetric === 'sales' ? row.sales : row.revenue));
+  const max = Math.max(...values, 1);
+  const chartWidth = 720;
+  const chartHeight = 252;
+  const paddingX = 34;
+  const top = 28;
+  const bottom = 202;
+  const points = rows.map((row, index) => {
+    const value = activeMetric === 'sales' ? row.sales : row.revenue;
+    const x = paddingX + (index / Math.max(rows.length - 1, 1)) * (chartWidth - paddingX * 2);
+    const y = bottom - (value / max) * (bottom - top);
+    return { ...row, value, x, y };
+  });
+  const activePoint =
+    points.find((point) => point.key === hoveredMonth) ??
+    points.find((point) => selectedMonths.includes(point.key)) ??
+    points[points.length - 1];
+  const hoveredPoint = points.find((point) => point.key === hoveredMonth);
+  const linePath = smoothPath(points);
+  const areaPath = `${linePath} L ${points[points.length - 1]?.x ?? paddingX} ${bottom} L ${points[0]?.x ?? paddingX} ${bottom} Z`;
 
   return (
-    <div className="flex h-full flex-col">
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full overflow-visible">
-        {[20, 40, 60, 80].map((line) => (
-          <line key={line} x1="0" x2="100" y1={line} y2={line} stroke="#F1DAC8" strokeWidth="0.35" />
-        ))}
-        <polyline points={points} fill="none" stroke="#F24A00" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-        {rows.map((row, index) => {
-          const x = (index / Math.max(rows.length - 1, 1)) * 100;
-          const y = 92 - (row.revenue / max) * 82;
-          return (
-            <circle
-              key={row.key}
-              cx={x}
-              cy={y}
-              r={selectedMonths.includes(row.key) ? 2.2 : 1.4}
-              fill={selectedMonths.includes(row.key) ? '#C94A00' : '#FFB48A'}
-              vectorEffect="non-scaling-stroke"
-            />
-          );
-        })}
-      </svg>
-      <div className="mt-2 grid grid-cols-12 text-center text-[11px] font-bold text-[#8A7F78]">
-        {rows.map((row) => (
-          <span key={row.key}>{row.label}</span>
-        ))}
+    <div className="overflow-hidden rounded-[18px] border border-[#E8D8CC] bg-white">
+      <div className="grid border-b border-[#EDE4DC] lg:grid-cols-[1fr_280px]">
+        <div className="px-5 py-4">
+          <p className="text-base font-extrabold text-[#1F1F1F]">Comparativo mensual</p>
+          <p className="mt-1 text-sm font-semibold text-[#6B625C]">
+            Ventas y monto acumulado por mes.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 border-t border-[#EDE4DC] lg:border-l lg:border-t-0">
+          <MetricToggle
+            active={activeMetric === 'sales'}
+            label="Ventas"
+            value={totalSales.toLocaleString('es-PE')}
+            onClick={() => setActiveMetric('sales')}
+          />
+          <MetricToggle
+            active={activeMetric === 'revenue'}
+            label="Monto"
+            value={formatMoney(totalRevenue)}
+            onClick={() => setActiveMetric('revenue')}
+          />
+        </div>
+      </div>
+
+      <div className="px-4 pb-5 pt-6">
+        <svg
+          viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+          className="h-[260px] w-full"
+          role="img"
+          aria-label="Evolucion mensual del reporte"
+          onMouseLeave={() => setHoveredMonth(null)}
+        >
+          <defs>
+            <linearGradient id="monthlyLineFill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#F24A00" stopOpacity="0.18" />
+              <stop offset="68%" stopColor="#FFB48A" stopOpacity="0.08" />
+              <stop offset="100%" stopColor="#FFF7F1" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {[0, 1, 2, 3, 4].map((index) => {
+            const y = top + (index / 4) * (bottom - top);
+            return (
+              <line
+                key={y}
+                x1={paddingX}
+                x2={chartWidth - paddingX}
+                y1={y}
+                y2={y}
+                stroke="#F1DAC8"
+                strokeWidth="1"
+                strokeDasharray={index === 4 ? '0' : '4 8'}
+              />
+            );
+          })}
+          <path d={areaPath} fill="url(#monthlyLineFill)" />
+          <path d={linePath} fill="none" stroke="#F24A00" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          {hoveredPoint && (
+            <g>
+              <line x1={hoveredPoint.x} x2={hoveredPoint.x} y1={top} y2={bottom} stroke="#F1DAC8" strokeWidth="1" strokeDasharray="4 8" />
+              <rect
+                x={Math.min(Math.max(hoveredPoint.x - 42, paddingX), chartWidth - paddingX - 84)}
+                y={Math.max(hoveredPoint.y - 48, 6)}
+                width="84"
+                height="34"
+                rx="12"
+                fill="#FFF7F1"
+                stroke="#F1DAC8"
+              />
+              <text
+                x={Math.min(Math.max(hoveredPoint.x, paddingX + 42), chartWidth - paddingX - 42)}
+                y={Math.max(hoveredPoint.y - 28, 26)}
+                textAnchor="middle"
+                className="fill-[#4B3024] text-[11px] font-extrabold"
+              >
+                {hoveredPoint.label}
+              </text>
+              <text
+                x={Math.min(Math.max(hoveredPoint.x, paddingX + 42), chartWidth - paddingX - 42)}
+                y={Math.max(hoveredPoint.y - 13, 41)}
+                textAnchor="middle"
+                className="fill-[#C94A00] text-[11px] font-extrabold"
+              >
+                {activeMetric === 'sales' ? `${hoveredPoint.value} ventas` : formatMoney(hoveredPoint.value)}
+              </text>
+            </g>
+          )}
+          {points.map((point) => {
+            const selected = selectedMonths.includes(point.key);
+            const active = activePoint?.key === point.key;
+            return (
+              <g key={point.key}>
+                <rect
+                  x={point.x - 24}
+                  y={top}
+                  width="48"
+                  height={bottom - top}
+                  fill="transparent"
+                  onMouseEnter={() => setHoveredMonth(point.key)}
+                />
+                <circle
+                  cx={point.x}
+                  cy={point.y}
+                  r={active ? 6 : selected ? 5 : 4}
+                  fill={selected ? '#C94A00' : '#FFB48A'}
+                  stroke="#FFFFFF"
+                  strokeWidth="3"
+                />
+                <text
+                  x={point.x}
+                  y={chartHeight - 16}
+                  textAnchor="middle"
+                  className={`text-[12px] font-bold ${selected ? 'fill-[#C94A00]' : 'fill-[#8A7F78]'}`}
+                >
+                  {point.label}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
       </div>
     </div>
+  );
+}
+
+function smoothPath(points: Array<{ x: number; y: number }>) {
+  if (!points.length) return '';
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+
+  return points.reduce((path, point, index, items) => {
+    if (index === 0) return `M ${point.x} ${point.y}`;
+
+    const previous = items[index - 1];
+    const controlDistance = (point.x - previous.x) / 2;
+    return `${path} C ${previous.x + controlDistance} ${previous.y}, ${point.x - controlDistance} ${point.y}, ${point.x} ${point.y}`;
+  }, '');
+}
+
+function MetricToggle({
+  active,
+  label,
+  value,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  value: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`min-w-[136px] px-5 py-4 text-left transition ${
+        active ? 'bg-[#FFF2E7]' : 'bg-white hover:bg-[#FFFCFA]'
+      }`}
+    >
+      <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#8A7F78]">{label}</span>
+      <span className="mt-1 block truncate text-xl font-extrabold text-[#1F1F1F]">{value}</span>
+    </button>
   );
 }
 

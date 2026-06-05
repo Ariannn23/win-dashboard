@@ -1,9 +1,11 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider = "postgresql"
+  schemas  = ["public", "auth"]
 }
 
 enum UserRole {
@@ -13,6 +15,7 @@ enum UserRole {
   ASESOR
 
   @@map("user_role")
+  @@schema("public")
 }
 
 enum SaleStatus {
@@ -25,6 +28,7 @@ enum SaleStatus {
   CANCELADO
 
   @@map("sale_status")
+  @@schema("public")
 }
 
 enum DocumentType {
@@ -33,6 +37,7 @@ enum DocumentType {
   PASAPORTE
 
   @@map("document_type")
+  @@schema("public")
 }
 
 enum HousingType {
@@ -40,6 +45,7 @@ enum HousingType {
   Multifamiliar
 
   @@map("housing_type")
+  @@schema("public")
 }
 
 model Profile {
@@ -56,6 +62,7 @@ model Profile {
   historial           StatusHistory[] @relation("HistorialUsuario")
 
   @@map("perfiles")
+  @@schema("public")
 }
 
 model Sale {
@@ -98,6 +105,7 @@ model Sale {
   @@index([supervisor_id], map: "ventas_supervisor_idx")
   @@index([numero_documento], map: "ventas_documento_idx")
   @@map("ventas")
+  @@schema("public")
 }
 
 model StatusHistory {
@@ -113,4 +121,16 @@ model StatusHistory {
 
   @@index([venta_id, created_at], map: "historial_venta_idx")
   @@map("historial_estados")
+  @@schema("public")
 }
+
+model Plan {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre     String   @unique
+  activo     Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("planes")
+  @@schema("public")
+}
+

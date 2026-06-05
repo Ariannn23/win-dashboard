@@ -30,9 +30,7 @@ export const saleSchema = z.object({
   tipo_vivienda: z.enum(['Casa', 'Multifamiliar']),
   distrito: z.string().min(1, 'Selecciona distrito'),
   referencia: z.string().min(3, 'Ingresa una referencia'),
-  plan_contratar: z.string().refine((value) => PLAN_OPTIONS.includes(value as (typeof PLAN_OPTIONS)[number]), {
-    message: 'Selecciona un plan valido',
-  }),
+  plan_contratar: z.string().min(1, 'El plan es requerido'),
   mesh: z.coerce.number().int().min(0).max(20),
   win_box: z.coerce.number().int().min(0).max(20),
   observaciones: z.string().optional().default(''),

@@ -23,6 +23,13 @@ create table public.perfiles (
   created_at timestamptz not null default now()
 );
 
+create table public.planes (
+  id uuid primary key default gen_random_uuid(),
+  nombre text not null unique,
+  activo boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
 create table public.ventas (
   id uuid primary key default gen_random_uuid(),
   estado public.sale_status not null default 'PENDIENTE_GRABACION',
@@ -265,19 +272,39 @@ $$;
 alter table public.perfiles enable row level security;
 alter table public.ventas enable row level security;
 alter table public.historial_estados enable row level security;
+alter table public.planes enable row level security;
 
 create policy "perfiles_select_autenticados"
 on public.perfiles for select
 to authenticated
 using (activo = true or public.current_user_role() = 'ADMIN' or id = auth.uid());
 
-create policy "perfiles_insert_admin"
+create policy "perfiles_insert_admin_supervisor"
 on public.perfiles for insert
 to authenticated
-with check (public.current_user_role() = 'ADMIN');
+with check (
+  public.current_user_role() = 'ADMIN' 
+  or (public.current_user_role() = 'SUPERVISOR' and rol = 'ASESOR')
+);
 
 create policy "perfiles_update_admin"
 on public.perfiles for update
+to authenticated
+using (public.current_user_role() = 'ADMIN')
+with check (public.current_user_role() = 'ADMIN');
+
+create policy "planes_select"
+on public.planes for select
+to authenticated
+using (activo = true or public.current_user_role() = 'ADMIN');
+
+create policy "planes_insert"
+on public.planes for insert
+to authenticated
+with check (public.current_user_role() = 'ADMIN');
+
+create policy "planes_update"
+on public.planes for update
 to authenticated
 using (public.current_user_role() = 'ADMIN')
 with check (public.current_user_role() = 'ADMIN');

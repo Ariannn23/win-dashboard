@@ -42,6 +42,14 @@ export function usePlans() {
   };
 
   const openEditPlan = (plan: InternetPlan) => {
+    if (!plan.active) {
+      showToast({
+        title: 'Plan deshabilitado',
+        detail: 'Habilita el plan antes de editar su informacion comercial.',
+        tone: 'warning',
+      });
+      return;
+    }
     setEditing(plan);
     setShowForm(true);
   };

@@ -21,6 +21,8 @@ import { ComboBox, DateControl, FieldError } from '@/shared/ui/FormControls';
 import { Modal } from '@/shared/ui/Modal';
 import { saleSchema, type SaleFormValues } from '@/shared/validation/schemas';
 import type { Profile, Sale } from '@/types';
+import { planService, type Plan } from '@/services/crm/planService';
+import { useEffect, useState } from 'react';
 import { FileField } from './FileField';
 
 interface SaleFormModalProps {
@@ -95,6 +97,12 @@ export function SaleFormModal({ sale, profiles, currentUser, onClose, onSubmit }
   const isSupervisorFlow = currentUser.rol === 'SUPERVISOR';
   const canEditBackOffice = currentUser.rol === 'ADMIN' || currentUser.rol === 'BACK';
 
+  const [planes, setPlanes] = useState<Plan[]>([]);
+  
+  useEffect(() => {
+    planService.getPlans().then(setPlanes).catch(console.error);
+  }, []);
+
   const {
     control,
     handleSubmit,
@@ -128,9 +136,9 @@ export function SaleFormModal({ sale, profiles, currentUser, onClose, onSubmit }
     <Modal
       open
       onClose={onClose}
-      className="relative my-auto flex max-h-[calc(100vh-3rem)] w-full max-w-[980px] flex-col overflow-hidden rounded-[22px] bg-white shadow-[0_30px_90px_rgba(31,31,31,0.24)]"
+      className="relative my-auto flex h-[calc(100dvh-1.5rem)] w-full max-w-[980px] flex-col overflow-hidden rounded-[22px] bg-white shadow-[0_30px_90px_rgba(31,31,31,0.24)] sm:h-[calc(100dvh-3rem)]"
     >
-      <div className="flex shrink-0 items-center justify-between border-b border-[#E8D8CC] bg-[#FFFCFA] px-8 py-6">
+      <div className="flex shrink-0 items-center justify-between border-b border-[#E8D8CC] bg-[#FFFCFA] px-5 py-5 sm:px-8 sm:py-6">
         <h2 className="text-[26px] font-extrabold tracking-[-0.025em] text-[#1F1F1F]">
           {sale ? 'Editar venta' : 'Registrar venta'}
         </h2>
@@ -145,7 +153,7 @@ export function SaleFormModal({ sale, profiles, currentUser, onClose, onSubmit }
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="hidden-scrollbar flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="hidden-scrollbar min-h-0 flex-1 space-y-8 overflow-y-auto px-8 py-7">
+          <div className="hidden-scrollbar min-h-0 flex-1 space-y-8 overflow-y-auto px-5 py-6 sm:px-8 sm:py-7">
             <section>
               <div className="rounded-[20px] border border-[#E8B9A3] bg-[#FFF2E7] p-5">
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
@@ -235,7 +243,7 @@ export function SaleFormModal({ sale, profiles, currentUser, onClose, onSubmit }
                         <ComboBox
                           value={field.value}
                           onChange={field.onChange}
-                          options={PLAN_OPTIONS.map((plan) => ({ value: plan, label: plan }))}
+                          options={planes.filter(p => p.activo || p.nombre === field.value).map((plan) => ({ value: plan.nombre, label: plan.nombre }))}
                         />
                       )}
                     />
@@ -375,7 +383,7 @@ export function SaleFormModal({ sale, profiles, currentUser, onClose, onSubmit }
 
             <section className="space-y-5">
               <SectionTitle icon={FileText} title="Documentos" />
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 <Controller
                   name="foto_dni"
                   control={control}
@@ -420,17 +428,17 @@ export function SaleFormModal({ sale, profiles, currentUser, onClose, onSubmit }
             </section>
           </div>
 
-          <div className="flex shrink-0 justify-end gap-4 border-t border-[#E8D8CC] bg-[#FFFCFA] px-8 py-5">
+          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#E8D8CC] bg-[#FFFCFA] px-5 py-4 sm:flex-row sm:justify-end sm:px-8 sm:py-5">
             <button
               type="button"
               onClick={onClose}
-              className="h-12 min-w-[180px] rounded-[15px] border border-[#E8B9A3] bg-white px-6 text-sm font-extrabold text-[#1F1F1F] hover:bg-[#FFF2E7]"
+              className="h-12 w-full rounded-[15px] border border-[#E8B9A3] bg-white px-6 text-sm font-extrabold text-[#1F1F1F] hover:bg-[#FFF2E7] sm:w-auto sm:min-w-[180px]"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="h-12 min-w-[220px] rounded-[15px] bg-gradient-to-r from-[#F24A00] to-[#C94A00] px-6 text-sm font-extrabold text-white shadow-[0_14px_22px_rgba(201,74,0,0.22)]"
+              className="h-12 w-full rounded-[15px] bg-gradient-to-r from-[#F24A00] to-[#C94A00] px-6 text-sm font-extrabold text-white shadow-[0_14px_22px_rgba(201,74,0,0.22)] sm:w-auto sm:min-w-[220px]"
             >
               {sale ? 'Guardar cambios' : 'Registrar venta'}
             </button>
