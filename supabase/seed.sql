@@ -98,6 +98,23 @@ insert into auth.users (
   ('00000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'pedro.gomez@win.pe', crypt('password123', gen_salt('bf')), '2026-05-25 09:00:00-05', '{"provider":"email","providers":["email"]}', '{"name":"Pedro Gomez"}', '2026-05-25 09:00:00-05', '2026-05-25 09:00:00-05'),
   ('00000000-0000-0000-0000-000000000007', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'ana.torres@win.pe', crypt('password123', gen_salt('bf')), '2026-05-26 09:00:00-05', '{"provider":"email","providers":["email"]}', '{"name":"Ana Torres"}', '2026-05-26 09:00:00-05', '2026-05-26 09:00:00-05');
 
+update auth.users
+set
+  confirmation_token = coalesce(confirmation_token, ''),
+  recovery_token = coalesce(recovery_token, ''),
+  email_change = coalesce(email_change, ''),
+  email_change_token_new = coalesce(email_change_token_new, ''),
+  email_change_token_current = coalesce(email_change_token_current, ''),
+  reauthentication_token = coalesce(reauthentication_token, ''),
+  phone_change = coalesce(phone_change, ''),
+  phone_change_token = coalesce(phone_change_token, ''),
+  raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"provider":"email","providers":["email"]}'::jsonb,
+  raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb),
+  is_super_admin = coalesce(is_super_admin, false),
+  is_sso_user = coalesce(is_sso_user, false),
+  is_anonymous = coalesce(is_anonymous, false)
+where email like '%@win.pe';
+
 insert into auth.identities (
   id,
   user_id,
@@ -115,6 +132,20 @@ insert into auth.identities (
   ('90000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000005', '{"sub":"00000000-0000-0000-0000-000000000005","email":"valeria.castro@win.pe"}', 'email', 'valeria.castro@win.pe', '2026-06-02 17:30:00-05', '2026-05-24 09:00:00-05', '2026-06-02 17:30:00-05'),
   ('90000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000006', '{"sub":"00000000-0000-0000-0000-000000000006","email":"pedro.gomez@win.pe"}', 'email', 'pedro.gomez@win.pe', '2026-06-01 15:10:00-05', '2026-05-25 09:00:00-05', '2026-06-01 15:10:00-05'),
   ('90000000-0000-0000-0000-000000000007', '00000000-0000-0000-0000-000000000007', '{"sub":"00000000-0000-0000-0000-000000000007","email":"ana.torres@win.pe"}', 'email', 'ana.torres@win.pe', '2026-06-03 11:05:00-05', '2026-05-26 09:00:00-05', '2026-06-03 11:05:00-05');
+
+update auth.identities i
+set
+  provider_id = u.id::text,
+  identity_data = jsonb_build_object(
+    'sub', u.id::text,
+    'email', u.email,
+    'email_verified', true,
+    'phone_verified', false
+  )
+from auth.users u
+where i.user_id = u.id
+  and i.provider = 'email'
+  and u.email like '%@win.pe';
 
 insert into public.perfiles (
   id,
