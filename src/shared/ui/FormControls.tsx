@@ -258,7 +258,7 @@ function parseDisplayDate(value: string) {
 export function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <span className="mt-1.5 block rounded-[10px] bg-[#FFF1F1] px-3 py-2 text-xs font-bold text-[#D64545]">
+    <span className="block text-[11px] font-bold leading-tight text-[#D64545]">
       {message}
     </span>
   );

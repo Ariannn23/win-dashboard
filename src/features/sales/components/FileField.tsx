@@ -8,10 +8,14 @@ interface FileFieldProps {
   kind: string;
   saleId: string;
   value?: string;
+  isUploadingAny?: boolean;
+  onUploadStart?: () => void;
+  onUploadEnd?: () => void;
+  onUploadConflict?: () => void;
   onChange: (url: string) => void;
 }
 
-export function FileField({ label, kind, saleId, value, onChange }: FileFieldProps) {
+export function FileField({ label, kind, saleId, value, isUploadingAny, onUploadStart, onUploadEnd, onUploadConflict, onChange }: FileFieldProps) {
   const [loading, setLoading] = useState(false);
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState('');
@@ -30,6 +34,7 @@ export function FileField({ label, kind, saleId, value, onChange }: FileFieldPro
     setError('');
     setFileName(file.name);
     setLoading(true);
+    onUploadStart?.();
     try {
       const url = await uploadSaleDocument(file, saleId, kind);
       onChange(url);
@@ -38,6 +43,7 @@ export function FileField({ label, kind, saleId, value, onChange }: FileFieldPro
       setError(uploadError instanceof Error ? uploadError.message : 'No se pudo subir el archivo.');
     } finally {
       setLoading(false);
+      onUploadEnd?.();
     }
   }
 
@@ -55,7 +61,13 @@ export function FileField({ label, kind, saleId, value, onChange }: FileFieldPro
           <button
             type="button"
             disabled={loading}
-            onClick={() => inputRef.current?.click()}
+            onClick={() => {
+              if (isUploadingAny && !loading) {
+                onUploadConflict?.();
+              } else {
+                inputRef.current?.click();
+              }
+            }}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-[#FFF2E7] text-[#C94A00] transition hover:bg-[#FFE2CC] disabled:cursor-wait disabled:opacity-70"
             title={loading ? 'Subiendo archivo' : 'Seleccionar archivo'}
           >

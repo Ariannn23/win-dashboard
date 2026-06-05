@@ -5,9 +5,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Eraser,
   FileText,
   Filter,
+  Timer,
   TrendingUp,
+  Trophy,
   UsersRound,
   WalletCards,
 } from 'lucide-react';
@@ -56,9 +59,7 @@ export function ReportsPage() {
   const defaultMonth = monthKey(now);
   const [months, setMonths] = useState<string[]>([defaultMonth]);
   const [reportType, setReportType] = useState<ReportType>('VENTAS');
-  const [supervisor, setSupervisor] = useState('TODOS');
   const [advisor, setAdvisor] = useState('TODOS');
-  const [district, setDistrict] = useState('TODOS');
   const [monthWindow, setMonthWindow] = useState(Math.floor(now.getMonth() / 3) * 3);
   const [page, setPage] = useState(1);
 
@@ -73,12 +74,10 @@ export function ReportsPage() {
 
   const scopedSales = useMemo(() => {
     return sales.filter((sale) => {
-      const matchesSupervisor = supervisor === 'TODOS' || sale.supervisor_id === supervisor;
       const matchesAdvisor = advisor === 'TODOS' || sale.asesor_id === advisor;
-      const matchesDistrict = district === 'TODOS' || sale.distrito === district;
-      return matchesSupervisor && matchesAdvisor && matchesDistrict;
+      return matchesAdvisor;
     });
-  }, [advisor, district, sales, supervisor]);
+  }, [advisor, sales]);
 
   const filteredSales = useMemo(() => {
     return scopedSales.filter((sale) => months.includes(monthKey(new Date(sale.created_at))));
@@ -145,17 +144,30 @@ export function ReportsPage() {
   }, [monthOptions, scopedSales]);
 
   const selectedMonthRows = monthlyRows.filter((row) => months.includes(row.key));
-  const advisorRows = advisors
+  const advisorRows = profiles
+    .filter((p) => p.rol === 'ASESOR')
     .map((profile) => {
-      const advisorSales = filteredSales.filter((sale) => sale.asesor_id === profile.id);
+      const profileSales = filteredSales.filter((sale) => sale.asesor_id === profile.id);
       return {
         name: profile.nombres,
-        sales: advisorSales.length,
-        revenue: advisorSales.reduce((sum, sale) => sum + saleAmount(sale), 0),
+        sales: profileSales.length,
+        revenue: profileSales.reduce((sum, sale) => sum + saleAmount(sale), 0),
       };
     })
-    .filter((row) => row.sales > 0 || row.revenue > 0)
-    .sort((a, b) => b.revenue - a.revenue);
+    .sort((a, b) => b.sales - a.sales);
+
+  const districtRows = Array.from(
+    filteredSales.reduce((map, sale) => {
+      const key = sale.distrito || 'Sin distrito';
+      const current = map.get(key) ?? { name: key, sales: 0, revenue: 0 };
+      current.sales += 1;
+      current.revenue += saleAmount(sale);
+      map.set(key, current);
+      return map;
+    }, new Map<string, { name: string; sales: number; revenue: number }>()),
+  )
+    .map(([, value]) => value)
+    .sort((a, b) => b.sales - a.sales);
 
   const planRows = Array.from(
     filteredSales.reduce((map, sale) => {
@@ -193,7 +205,7 @@ export function ReportsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [advisor, district, months, reportType, supervisor]);
+  }, [advisor, months, reportType]);
 
   const exportCsv = () => {
     const header = ['Mes', 'Ventas', 'Clientes nuevos', 'Monto vendido', 'Completadas', 'Pendientes', 'Conversion'];
@@ -315,7 +327,7 @@ export function ReportsPage() {
       </section>
 
       <section className="rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.045)]">
-        <div className="grid items-end gap-4 xl:grid-cols-[310px_0.75fr_0.95fr_0.95fr_0.95fr_auto]">
+        <div className={`grid items-end gap-4 ${user.rol === 'ASESOR' ? 'xl:grid-cols-[310px_1fr_auto]' : 'xl:grid-cols-[310px_0.75fr_1fr_auto]'}`}>
           <MonthCarousel
             monthOptions={monthOptions}
             monthWindow={monthWindow}
@@ -325,38 +337,36 @@ export function ReportsPage() {
             onToggleMonth={toggleMonth}
           />
           <ReportSelect
-            label="Tipo"
+            label="Tipo de reporte"
             value={reportType}
             onChange={(value) => setReportType(value as ReportType)}
             options={[
-              { value: 'VENTAS', label: 'Ventas' },
+              { value: 'VENTAS', label: 'General de ventas' },
               { value: 'CLIENTES', label: 'Clientes' },
-              { value: 'ASESORES', label: 'Asesores' },
+              { value: 'ASESORES', label: 'Rendimiento de asesores' },
               { value: 'PLANES', label: 'Planes' },
             ]}
           />
-          <ReportSelect
-            label="Supervisor"
-            value={supervisor}
-            onChange={setSupervisor}
-            options={[{ value: 'TODOS', label: 'Todos' }, ...supervisors.map((profile) => ({ value: profile.id, label: profile.nombres }))]}
-          />
-          <ReportSelect
-            label="Asesor"
-            value={advisor}
-            onChange={setAdvisor}
-            options={[{ value: 'TODOS', label: 'Todos' }, ...advisors.map((profile) => ({ value: profile.id, label: profile.nombres }))]}
-          />
-          <ReportSelect
-            label="Distrito"
-            value={district}
-            onChange={setDistrict}
-            options={[{ value: 'TODOS', label: 'Todos' }, ...districts.map((item) => ({ value: item, label: item }))]}
-          />
-          <div className="flex items-end">
-            <button className="flex h-12 items-center gap-2 rounded-[14px] bg-gradient-to-r from-[#F24A00] to-[#C94A00] px-5 text-sm font-extrabold text-white shadow-[0_14px_22px_rgba(201,74,0,0.22)]" type="button">
-              <Filter className="h-4 w-4" aria-hidden="true" />
-              Generar
+          {user.rol !== 'ASESOR' && (
+            <ReportSelect
+              label="Asesor"
+              value={advisor}
+              onChange={setAdvisor}
+              options={[{ value: 'TODOS', label: 'Todos' }, ...advisors.map((profile) => ({ value: profile.id, label: profile.nombres }))]}
+            />
+          )}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setMonths([monthOptions[0].key]);
+                setReportType('VENTAS');
+                setAdvisor('TODOS');
+              }}
+              className="flex h-12 items-center gap-2 rounded-[14px] border border-[#E8D8CC] bg-white px-5 text-sm font-extrabold text-[#6B625C] hover:bg-[#FFF2E7] hover:text-[#A83B00]"
+            >
+              <Eraser className="h-4 w-4" aria-hidden="true" />
+              Limpiar
             </button>
           </div>
         </div>
@@ -371,20 +381,35 @@ export function ReportsPage() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <article className="rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.045)]">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-extrabold text-[#1F1F1F]">Evolucion mensual</h2>
-            <span className="text-xs font-extrabold text-[#8A7F78]">{currentYear}</span>
-          </div>
-          <div className="mt-5">
-            <MonthlyEvolutionChart rows={monthlyRows} selectedMonths={months} />
-          </div>
-        </article>
+        <div className="h-full">
+          <MonthlyEvolutionChart rows={monthlyRows} selectedMonths={months} />
+        </div>
 
-        <article className="rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.045)]">
-          <h2 className="text-base font-extrabold text-[#1F1F1F]">Ventas por asesor</h2>
-          <div className="mt-5 h-[260px]">
-            <AdvisorBars rows={advisorRows} />
+        <article className="rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.045)] flex flex-col">
+          <h2 className="text-base font-extrabold text-[#1F1F1F]">Top Asesores (Todas las ventas)</h2>
+          <div className="mt-5 flex-1 overflow-y-auto hidden-scrollbar h-[260px] space-y-3 pr-1">
+            {(advisorRows.length ? advisorRows : [{ name: 'Sin ventas en el periodo', sales: 0, revenue: 0 }]).map((row, index) => (
+              <div key={row.name} className="flex items-center justify-between rounded-[14px] border border-[#F3EAE3] px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-extrabold ${
+                    index === 0 && row.sales > 0
+                      ? 'bg-gradient-to-br from-[#FFB84D] to-[#F28B00] text-white shadow-[0_4px_10px_rgba(242,139,0,0.3)]'
+                      : 'bg-[#FFF2E7] text-[#C94A00]'
+                  }`}>
+                    {index === 0 && row.sales > 0 ? (
+                      <Trophy className="h-3.5 w-3.5" aria-hidden="true" />
+                    ) : (
+                      index + 1
+                    )}
+                  </span>
+                  <div>
+                    <p className="text-sm font-extrabold text-[#1F1F1F]">{row.name}</p>
+                    <p className="text-xs font-semibold text-[#8A7F78]">{row.sales} ventas registradas</p>
+                  </div>
+                </div>
+                <span className="text-sm font-extrabold text-[#4B3024]">{formatMoney(row.revenue)}</span>
+              </div>
+            ))}
           </div>
         </article>
       </section>
@@ -396,12 +421,14 @@ export function ReportsPage() {
         </article>
 
         <article className="rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.045)]">
-          <h2 className="text-base font-extrabold text-[#1F1F1F]">Top asesores</h2>
+          <h2 className="text-base font-extrabold text-[#1F1F1F]">Top distritos</h2>
           <div className="mt-4 space-y-3">
-            {(advisorRows.length ? advisorRows : [{ name: 'Sin ventas en el periodo', sales: 0, revenue: 0 }]).slice(0, 5).map((row, index) => (
+            {(districtRows.length ? districtRows : [{ name: 'Sin ventas en el periodo', sales: 0, revenue: 0 }]).slice(0, 5).map((row, index) => (
               <div key={row.name} className="flex items-center justify-between rounded-[14px] border border-[#F3EAE3] px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-[#FFF2E7] text-xs font-extrabold text-[#C94A00]">{index + 1}</span>
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#FFF2E7] text-xs font-extrabold text-[#C94A00]">
+                    {index + 1}
+                  </span>
                   <div>
                     <p className="text-sm font-extrabold text-[#1F1F1F]">{row.name}</p>
                     <p className="text-xs font-semibold text-[#8A7F78]">{row.sales} ventas</p>
@@ -577,8 +604,9 @@ function MonthlyEvolutionChart({
 }) {
   const [activeMetric, setActiveMetric] = useState<EvolutionMetric>('sales');
   const [hoveredMonth, setHoveredMonth] = useState<string | null>(null);
-  const totalSales = rows.reduce((sum, row) => sum + row.sales, 0);
-  const totalRevenue = rows.reduce((sum, row) => sum + row.revenue, 0);
+  const activeMetricRows = rows.filter(r => selectedMonths.includes(r.key));
+  const totalSales = activeMetricRows.reduce((sum, row) => sum + row.sales, 0);
+  const totalRevenue = activeMetricRows.reduce((sum, row) => sum + row.revenue, 0);
   const values = rows.map((row) => (activeMetric === 'sales' ? row.sales : row.revenue));
   const max = Math.max(...values, 1);
   const chartWidth = 720;
@@ -597,12 +625,20 @@ function MonthlyEvolutionChart({
     points.find((point) => selectedMonths.includes(point.key)) ??
     points[points.length - 1];
   const hoveredPoint = points.find((point) => point.key === hoveredMonth);
+  let tooltip = null;
+  if (hoveredPoint) {
+    const boxWidth = 100;
+    const boxHeight = 48;
+    const tX = Math.min(Math.max(hoveredPoint.x - boxWidth / 2, paddingX), chartWidth - paddingX - boxWidth);
+    const tY = Math.max(hoveredPoint.y - boxHeight - 12, 6);
+    tooltip = { x: tX, y: tY, width: boxWidth, height: boxHeight, centerX: tX + boxWidth / 2 };
+  }
   const linePath = smoothPath(points);
   const areaPath = `${linePath} L ${points[points.length - 1]?.x ?? paddingX} ${bottom} L ${points[0]?.x ?? paddingX} ${bottom} Z`;
 
   return (
     <div className="overflow-hidden rounded-[18px] border border-[#E8D8CC] bg-white">
-      <div className="grid border-b border-[#EDE4DC] lg:grid-cols-[1fr_280px]">
+      <div className="grid border-b border-[#EDE4DC] lg:grid-cols-[1fr_320px]">
         <div className="px-5 py-4">
           <p className="text-base font-extrabold text-[#1F1F1F]">Comparativo mensual</p>
           <p className="mt-1 text-sm font-semibold text-[#6B625C]">
@@ -657,36 +693,6 @@ function MonthlyEvolutionChart({
           })}
           <path d={areaPath} fill="url(#monthlyLineFill)" />
           <path d={linePath} fill="none" stroke="#F24A00" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-          {hoveredPoint && (
-            <g>
-              <line x1={hoveredPoint.x} x2={hoveredPoint.x} y1={top} y2={bottom} stroke="#F1DAC8" strokeWidth="1" strokeDasharray="4 8" />
-              <rect
-                x={Math.min(Math.max(hoveredPoint.x - 42, paddingX), chartWidth - paddingX - 84)}
-                y={Math.max(hoveredPoint.y - 48, 6)}
-                width="84"
-                height="34"
-                rx="12"
-                fill="#FFF7F1"
-                stroke="#F1DAC8"
-              />
-              <text
-                x={Math.min(Math.max(hoveredPoint.x, paddingX + 42), chartWidth - paddingX - 42)}
-                y={Math.max(hoveredPoint.y - 28, 26)}
-                textAnchor="middle"
-                className="fill-[#4B3024] text-[11px] font-extrabold"
-              >
-                {hoveredPoint.label}
-              </text>
-              <text
-                x={Math.min(Math.max(hoveredPoint.x, paddingX + 42), chartWidth - paddingX - 42)}
-                y={Math.max(hoveredPoint.y - 13, 41)}
-                textAnchor="middle"
-                className="fill-[#C94A00] text-[11px] font-extrabold"
-              >
-                {activeMetric === 'sales' ? `${hoveredPoint.value} ventas` : formatMoney(hoveredPoint.value)}
-              </text>
-            </g>
-          )}
           {points.map((point) => {
             const selected = selectedMonths.includes(point.key);
             const active = activePoint?.key === point.key;
@@ -719,6 +725,37 @@ function MonthlyEvolutionChart({
               </g>
             );
           })}
+          {hoveredPoint && tooltip && (
+            <g className="pointer-events-none">
+              <line x1={hoveredPoint.x} x2={hoveredPoint.x} y1={top} y2={bottom} stroke="#F1DAC8" strokeWidth="1" strokeDasharray="4 8" />
+              <rect
+                x={tooltip.x}
+                y={tooltip.y}
+                width={tooltip.width}
+                height={tooltip.height}
+                rx="12"
+                fill="#FFFBF8"
+                stroke="#F1DAC8"
+                style={{ filter: 'drop-shadow(0px 8px 12px rgba(91,47,20,0.12))' }}
+              />
+              <text
+                x={tooltip.centerX}
+                y={tooltip.y + 20}
+                textAnchor="middle"
+                className="fill-[#4B3024] text-[11px] font-extrabold"
+              >
+                {hoveredPoint.label}
+              </text>
+              <text
+                x={tooltip.centerX}
+                y={tooltip.y + 36}
+                textAnchor="middle"
+                className="fill-[#C94A00] text-[12px] font-extrabold"
+              >
+                {activeMetric === 'sales' ? `${hoveredPoint.value} ventas` : formatMoney(hoveredPoint.value)}
+              </text>
+            </g>
+          )}
         </svg>
       </div>
     </div>
@@ -753,36 +790,17 @@ function MetricToggle({
     <button
       type="button"
       onClick={onClick}
-      className={`min-w-[136px] px-5 py-4 text-left transition ${
+      className={`min-w-[150px] px-5 py-4 text-left transition ${
         active ? 'bg-[#FFF2E7]' : 'bg-white hover:bg-[#FFFCFA]'
       }`}
     >
       <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#8A7F78]">{label}</span>
-      <span className="mt-1 block truncate text-xl font-extrabold text-[#1F1F1F]">{value}</span>
+      <span className="mt-1 block truncate text-lg font-extrabold text-[#1F1F1F]">{value}</span>
     </button>
   );
 }
 
-function AdvisorBars({ rows }: { rows: Array<{ name: string; revenue: number }> }) {
-  const visibleRows = rows.length ? rows.slice(0, 6) : [{ name: 'Sin datos', revenue: 0 }];
-  const max = Math.max(...visibleRows.map((row) => row.revenue), 1);
-
-  return (
-    <div className="flex h-full items-end gap-4">
-      {visibleRows.map((row) => (
-        <div key={row.name} className="flex h-full flex-1 flex-col justify-end gap-2">
-          <div className="flex flex-1 items-end">
-            <div
-              className="w-full rounded-t-[12px] bg-gradient-to-t from-[#C94A00] to-[#FF7A1A]"
-              style={{ height: `${Math.max(8, (row.revenue / max) * 100)}%` }}
-            />
-          </div>
-          <p className="line-clamp-2 min-h-8 text-center text-[11px] font-bold text-[#4B3024]">{row.name}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
+// Removed AdvisorBars component
 
 function PlanDonut({ rows, total }: { rows: Array<{ name: string; sales: number }>; total: number }) {
   const colors = ['#F24A00', '#FF7A1A', '#FFB84D', '#6B625C', '#E8D8CC'];

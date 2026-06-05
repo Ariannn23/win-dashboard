@@ -2,10 +2,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Banknote,
   BriefcaseBusiness,
+  ClipboardEdit,
   FileText,
-  Headphones,
   MapPin,
-  Plus,
   Search,
   UserRound,
   UsersRound,
@@ -23,6 +22,7 @@ import { saleSchema, type SaleFormValues } from '@/shared/validation/schemas';
 import type { Profile, Sale } from '@/types';
 import { planService, type Plan } from '@/services/crm/planService';
 import { useEffect, useState } from 'react';
+import { useToast } from '@/shared/ui/Toast';
 import { FileField } from './FileField';
 
 interface SaleFormModalProps {
@@ -90,14 +90,15 @@ function toFormValues(sale: Sale): SaleFormValues {
 }
 
 export function SaleFormModal({ sale, profiles, currentUser, onClose, onSubmit }: SaleFormModalProps) {
+  const { showToast } = useToast();
+  const [isUploadingAny, setIsUploadingAny] = useState(false);
+  const [planes, setPlanes] = useState<Plan[]>([]);
   const advisors = profiles.filter((profile) => profile.rol === 'ASESOR' && profile.activo);
   const supervisors = profiles.filter((profile) => profile.rol === 'SUPERVISOR' && profile.activo);
   const draftId = useMemo(() => sale?.id ?? crypto.randomUUID(), [sale?.id]);
   const isAdvisorFlow = currentUser.rol === 'ASESOR';
   const isSupervisorFlow = currentUser.rol === 'SUPERVISOR';
   const canEditBackOffice = currentUser.rol === 'ADMIN' || currentUser.rol === 'BACK';
-
-  const [planes, setPlanes] = useState<Plan[]>([]);
   
   useEffect(() => {
     planService.getPlans().then(setPlanes).catch(console.error);
@@ -128,9 +129,9 @@ export function SaleFormModal({ sale, profiles, currentUser, onClose, onSubmit }
   const planPrice = planBasePriceLabel(selectedPlan || '');
 
   const inputClass =
-    'mt-2 h-12 w-full rounded-[14px] border border-[#E8D8CC] bg-white px-4 text-sm font-semibold text-[#1F1F1F] outline-none transition focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70';
+    'h-12 w-full rounded-[14px] border border-[#E8D8CC] bg-white px-4 text-sm font-semibold text-[#1F1F1F] outline-none transition focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70';
   const areaClass =
-    'mt-2 min-h-24 w-full rounded-[14px] border border-[#E8D8CC] bg-white px-4 py-3 text-sm font-semibold text-[#1F1F1F] outline-none transition focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70';
+    'min-h-24 w-full rounded-[14px] border border-[#E8D8CC] bg-white px-4 py-3 text-sm font-semibold text-[#1F1F1F] outline-none transition focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70';
 
   return (
     <Modal
@@ -185,7 +186,14 @@ export function SaleFormModal({ sale, profiles, currentUser, onClose, onSubmit }
                 <SectionTitle icon={UserRound} title="Datos del cliente" />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Nombres y apellidos" error={errors.nombres_cliente?.message}>
-                    <input {...register('nombres_cliente')} className={inputClass} />
+                    <input
+                      {...register('nombres_cliente', {
+                        onChange: (e) => {
+                          e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                        }
+                      })}
+                      className={inputClass}
+                    />
                   </Field>
                   <Field label="Correo electronico" error={errors.correo_cliente?.message}>
                     <input type="email" {...register('correo_cliente')} className={inputClass} />
@@ -208,7 +216,17 @@ export function SaleFormModal({ sale, profiles, currentUser, onClose, onSubmit }
                     />
                   </Field>
                   <Field label="Numero documento" error={errors.numero_documento?.message}>
-                    <input {...register('numero_documento')} className={inputClass} />
+                    <input
+                      {...register('numero_documento', {
+                        onChange: (e) => {
+                          if (docType === 'DNI') {
+                            e.target.value = e.target.value.replace(/\D/g, "");
+                          }
+                        }
+                      })}
+                      maxLength={docType === 'DNI' ? 8 : 12}
+                      className={inputClass}
+                    />
                   </Field>
                   <Field label="Fecha nacimiento" error={errors.fecha_nacimiento?.message}>
                     <Controller
@@ -218,16 +236,49 @@ export function SaleFormModal({ sale, profiles, currentUser, onClose, onSubmit }
                     />
                   </Field>
                   <Field label="Lugar nacimiento" error={errors.lugar_nacimiento?.message}>
-                    <input {...register('lugar_nacimiento')} className={inputClass} />
+                    <input
+                      {...register('lugar_nacimiento', {
+                        onChange: (e) => {
+                          const val = e.target.value;
+                          if (val.length > 0) {
+                            e.target.value = val.charAt(0).toUpperCase() + val.slice(1);
+                          }
+                        }
+                      })}
+                      className={inputClass}
+                    />
                   </Field>
                   <Field label="Celular principal" error={errors.celular_principal?.message}>
-                    <input {...register('celular_principal')} className={inputClass} />
+                    <input
+                      {...register('celular_principal', {
+                        onChange: (e) => {
+                          e.target.value = e.target.value.replace(/\D/g, "");
+                        }
+                      })}
+                      maxLength={9}
+                      className={inputClass}
+                    />
                   </Field>
                   <Field label="Celular referencia" error={errors.celular_referencia?.message}>
-                    <input {...register('celular_referencia')} className={inputClass} />
+                    <input
+                      {...register('celular_referencia', {
+                        onChange: (e) => {
+                          e.target.value = e.target.value.replace(/\D/g, "");
+                        }
+                      })}
+                      maxLength={9}
+                      className={inputClass}
+                    />
                   </Field>
                   <Field label="Titular de linea" error={errors.titular_linea?.message}>
-                    <input {...register('titular_linea')} className={inputClass} />
+                    <input
+                      {...register('titular_linea', {
+                        onChange: (e) => {
+                          e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+                        }
+                      })}
+                      className={inputClass}
+                    />
                   </Field>
                 </div>
               </div>
@@ -388,21 +439,69 @@ export function SaleFormModal({ sale, profiles, currentUser, onClose, onSubmit }
                   name="foto_dni"
                   control={control}
                   render={({ field }) => (
-                    <FileField label="Foto DNI" kind="dni" saleId={draftId} value={field.value} onChange={field.onChange} />
+                    <FileField
+                      label="Foto DNI"
+                      kind="dni"
+                      saleId={draftId}
+                      value={field.value}
+                      onChange={field.onChange}
+                      isUploadingAny={isUploadingAny}
+                      onUploadStart={() => setIsUploadingAny(true)}
+                      onUploadEnd={() => setIsUploadingAny(false)}
+                      onUploadConflict={() => {
+                        showToast({
+                          title: 'Carga en proceso',
+                          detail: 'Espera a que termine de subir la foto actual.',
+                          tone: 'warning',
+                        });
+                      }}
+                    />
                   )}
                 />
                 <Controller
                   name="foto_recibo"
                   control={control}
                   render={({ field }) => (
-                    <FileField label="Foto Recibo" kind="recibo" saleId={draftId} value={field.value} onChange={field.onChange} />
+                    <FileField
+                      label="Foto Recibo"
+                      kind="recibo"
+                      saleId={draftId}
+                      value={field.value}
+                      onChange={field.onChange}
+                      isUploadingAny={isUploadingAny}
+                      onUploadStart={() => setIsUploadingAny(true)}
+                      onUploadEnd={() => setIsUploadingAny(false)}
+                      onUploadConflict={() => {
+                        showToast({
+                          title: 'Carga en proceso',
+                          detail: 'Espera a que termine de subir la foto actual.',
+                          tone: 'warning',
+                        });
+                      }}
+                    />
                   )}
                 />
                 <Controller
                   name="foto_selfie"
                   control={control}
                   render={({ field }) => (
-                    <FileField label="Foto Selfie" kind="selfie" saleId={draftId} value={field.value} onChange={field.onChange} />
+                    <FileField
+                      label="Foto Selfie"
+                      kind="selfie"
+                      saleId={draftId}
+                      value={field.value}
+                      onChange={field.onChange}
+                      isUploadingAny={isUploadingAny}
+                      onUploadStart={() => setIsUploadingAny(true)}
+                      onUploadEnd={() => setIsUploadingAny(false)}
+                      onUploadConflict={() => {
+                        showToast({
+                          title: 'Carga en proceso',
+                          detail: 'Espera a que termine de subir la foto actual.',
+                          tone: 'warning',
+                        });
+                      }}
+                    />
                   )}
                 />
               </div>
@@ -410,8 +509,8 @@ export function SaleFormModal({ sale, profiles, currentUser, onClose, onSubmit }
 
             <section className={`grid gap-4 ${canEditBackOffice ? 'md:grid-cols-2' : ''}`}>
               <div>
-                <SectionTitle icon={Headphones} title="Observaciones" />
-                <Field label="Observaciones" error={errors.observaciones?.message}>
+                <SectionTitle icon={ClipboardEdit} title="Observaciones" />
+                <Field error={errors.observaciones?.message}>
                   <textarea {...register('observaciones')} className={areaClass} />
                 </Field>
               </div>
@@ -479,15 +578,17 @@ function Field({
   error,
   children,
 }: {
-  label: string;
+  label?: string;
   error?: string;
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="text-sm font-semibold text-[#4B3024]">{label}</span>
+    <label className="flex flex-col">
+      {label && <span className="mb-1 text-sm font-semibold text-[#4B3024]">{label}</span>}
       {children}
-      <FieldError message={error} />
+      <div className="mt-1 min-h-[16px]">
+        <FieldError message={error} />
+      </div>
     </label>
   );
 }

@@ -113,6 +113,15 @@ export function SalesTable({ sales, profiles, user, onEdit, onStatus, onView, on
                     >
                       <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
                     </button>
+                    {user.rol === 'BACK' && sale.estado === 'PENDIENTE_GRABACION' && (
+                      <button
+                        type="button"
+                        onClick={() => onStatus(sale)}
+                        className="ml-1 rounded-[10px] bg-[#FFE2CC] px-3 py-1.5 text-xs font-extrabold text-[#C94A00] transition hover:bg-[#FFD8CA]"
+                      >
+                        Revisar
+                      </button>
+                    )}
 
                     {openMenuId === sale.id && (
                       <div className="absolute right-0 top-10 z-20 w-52 overflow-hidden rounded-[14px] border border-[#E8D8CC] bg-white p-1.5 shadow-[0_18px_45px_rgba(91,47,20,0.14)]">
@@ -134,7 +143,7 @@ export function SalesTable({ sales, profiles, user, onEdit, onStatus, onView, on
                             }}
                           />
                         )}
-                        {canChangeStatus(user) && (
+                        {canChangeStatus(user, sale) && (
                           <ActionItem
                             icon={RefreshCw}
                             label="Actualizar estado"

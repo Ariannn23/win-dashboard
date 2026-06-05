@@ -1,12 +1,17 @@
 import { FINAL_STATUSES } from './constants';
 import type { Profile, Sale } from '@/types';
 
-export function canChangeStatus(user?: Profile | null) {
-  return user?.rol === 'ADMIN' || user?.rol === 'BACK';
+export function canChangeStatus(user: Profile | null | undefined, sale: Sale) {
+  if (!user) return false;
+  if (user.rol === 'ADMIN' || user.rol === 'BACK') return true;
+  if (user.rol === 'ASESOR' || user.rol === 'SUPERVISOR') {
+    return sale.estado === 'RECHAZADO' || sale.estado === 'CANCELADO';
+  }
+  return false;
 }
 
 export function canManageUsers(user?: Profile | null) {
-  return user?.rol === 'ADMIN';
+  return user?.rol === 'ADMIN' || user?.rol === 'SUPERVISOR';
 }
 
 export function canManageAsesores(user?: Profile | null) {

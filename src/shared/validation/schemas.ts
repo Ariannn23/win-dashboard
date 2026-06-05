@@ -56,6 +56,7 @@ export const saleSchema = z.object({
 
 export const userSchema = z.object({
   nombres: z.string().min(3, 'Ingresa nombres'),
+  dni: z.string().regex(/^\d{8}$/, 'El DNI debe tener 8 digitos').optional().or(z.literal('')),
   correo: z
     .string()
     .trim()
@@ -69,6 +70,13 @@ export const userSchema = z.object({
     .email('Correo de recuperacion invalido'),
   rol: z.enum(['ADMIN', 'BACK', 'SUPERVISOR', 'ASESOR']),
   activo: z.boolean().default(true),
+  password: z
+    .string()
+    .optional()
+    .refine((val) => {
+      if (!val) return true;
+      return val.length >= 8 && /[a-zA-Z]/.test(val) && /[0-9]/.test(val) && /[^a-zA-Z0-9]/.test(val);
+    }, 'Debe tener min 8 caracteres, 1 letra, 1 numero y 1 caracter especial'),
 });
 
 export type SaleFormValues = z.infer<typeof saleSchema>;

@@ -3,12 +3,14 @@ import { useMemo, useState } from 'react';
 import { FINAL_STATUSES, STATUS_LABELS, STATUS_ORDER } from '@/shared/lib/constants';
 import { initials } from '@/shared/lib/format';
 import { planBasePriceLabel } from '@/shared/lib/sales';
+import { useAuth } from '@/app/providers/AuthProvider';
 import { DateControl, FieldError } from '@/shared/ui/FormControls';
 import { Modal } from '@/shared/ui/Modal';
-import type { Sale, SaleStatus } from '@/types';
+import type { Role, Sale, SaleHistory, SaleStatus } from '@/types';
 
 interface StatusChangeModalProps {
   sale: Sale;
+  history?: SaleHistory[];
   onClose: () => void;
   onSubmit: (nextStatus: SaleStatus, comment: string) => void | Promise<void>;
 }
@@ -16,7 +18,6 @@ interface StatusChangeModalProps {
 interface StatusChangeErrors {
   status?: string;
   comment?: string;
-  followUpDate?: string;
 }
 
 function simpleStatus(status: SaleStatus) {
@@ -40,45 +41,42 @@ function statusDescription(status: SaleStatus, currentStatus: SaleStatus) {
   return currentStatus ? 'Siguiente paso del flujo.' : 'Cambio de estado.';
 }
 
-function nextAllowedStatuses(currentStatus: SaleStatus): SaleStatus[] {
-  if (FINAL_STATUSES.includes(currentStatus)) return [];
+function nextAllowedStatuses(currentStatus: SaleStatus, role?: Role): SaleStatus[] {
+  if (role === 'ASESOR' || role === 'SUPERVISOR') {
+    if (currentStatus === 'RECHAZADO' || currentStatus === 'CANCELADO') return ['PENDIENTE_GRABACION'];
+    return [];
+  }
 
-  if (currentStatus === 'PENDIENTE_GRABACION') return ['GRABADO', 'RECHAZADO', 'CANCELADO'];
-  if (currentStatus === 'RECHAZADO') return ['PENDIENTE_GRABACION', 'CANCELADO'];
+  if (currentStatus === 'PENDIENTE_GRABACION') return ['PROGRAMADO_GRABACION', 'GRABADO', 'RECHAZADO', 'CANCELADO'];
+  if (currentStatus === 'PROGRAMADO_GRABACION') return ['GRABADO', 'RECHAZADO', 'CANCELADO'];
   if (currentStatus === 'GRABADO') return ['PROGRAMADO_INSTALACION', 'CANCELADO'];
   if (currentStatus === 'PROGRAMADO_INSTALACION') return ['INSTALADO', 'CANCELADO'];
+  if (currentStatus === 'RECHAZADO' || currentStatus === 'CANCELADO') return ['PENDIENTE_GRABACION'];
 
   return [];
 }
 
-function requiresFollowUpDate(status: SaleStatus) {
-  return status === 'PROGRAMADO_GRABACION' || status === 'PROGRAMADO_INSTALACION';
-}
+
 
 function requiresComment(status: SaleStatus) {
   return status === 'RECHAZADO' || status === 'CANCELADO';
 }
 
-function formatAuditDate(value: string) {
-  if (!value) return '';
-  const [year, month, day] = value.split('-');
-  return `${day}/${month}/${year}`;
-}
 
-export function StatusChangeModal({ sale, onClose, onSubmit }: StatusChangeModalProps) {
+
+export function StatusChangeModal({ sale, history = [], onClose, onSubmit }: StatusChangeModalProps) {
+  const { user } = useAuth();
   const options = useMemo(() => {
-    return nextAllowedStatuses(sale.estado);
-  }, [sale.estado]);
+    return nextAllowedStatuses(sale.estado, user?.rol);
+  }, [sale.estado, user?.rol]);
   const [status, setStatus] = useState<SaleStatus>(options[0] ?? sale.estado);
   const [comment, setComment] = useState('');
-  const [followUpDate, setFollowUpDate] = useState('');
   const [errors, setErrors] = useState<StatusChangeErrors>({});
   const [submitting, setSubmitting] = useState(false);
 
   const planPrice = planBasePriceLabel(sale.plan_contratar);
   const isCompleting = status === 'INSTALADO';
   const today = new Date().toISOString().slice(0, 10);
-  const selectedRequiresDate = requiresFollowUpDate(status);
   const selectedRequiresComment = requiresComment(status);
 
   const validate = () => {
@@ -96,13 +94,6 @@ export function StatusChangeModal({ sale, onClose, onSubmit }: StatusChangeModal
       nextErrors.comment = 'El comentario no puede superar los 300 caracteres.';
     }
 
-    if (selectedRequiresDate && !followUpDate) {
-      nextErrors.followUpDate = 'Selecciona una fecha de seguimiento.';
-    }
-
-    if (followUpDate && followUpDate < today) {
-      nextErrors.followUpDate = 'La fecha no puede ser anterior a hoy.';
-    }
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -111,12 +102,7 @@ export function StatusChangeModal({ sale, onClose, onSubmit }: StatusChangeModal
   const handleSubmit = async () => {
     if (!validate()) return;
 
-    const auditComment = [
-      comment.trim() || `Cambio a ${STATUS_LABELS[status]}`,
-      followUpDate ? `Seguimiento: ${formatAuditDate(followUpDate)}` : '',
-    ]
-      .filter(Boolean)
-      .join(' | ');
+    const auditComment = comment.trim() || `Cambio a ${STATUS_LABELS[status]}`;
 
     setSubmitting(true);
     try {
@@ -233,50 +219,46 @@ export function StatusChangeModal({ sale, onClose, onSubmit }: StatusChangeModal
                   />
                   <FieldError message={errors.comment} />
                 </label>
-
-                <label className="block">
-                  <span className="flex items-center justify-between text-sm font-semibold uppercase text-[#4B3024]">
-                    Fecha de proximo seguimiento
-                    <span className="font-semibold normal-case text-[#8A7F78]">
-                      {selectedRequiresDate ? 'Obligatoria' : 'Opcional'}
-                    </span>
-                  </span>
-                  <div className="mt-3 overflow-hidden rounded-[16px] border border-[#E8D8CC] bg-white transition focus-within:border-[#FF7A1A] focus-within:ring-4 focus-within:ring-[#FFE2CC]/70">
-                    <div className="flex items-center gap-4 px-5 py-4">
-                      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-[13px] bg-[#FFF2E7] text-[#C94A00]">
-                        <Calendar className="h-5 w-5" aria-hidden="true" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#8A7F78]">
-                          {followUpDate ? 'Fecha seleccionada' : 'Sin fecha seleccionada'}
-                        </p>
-                        <div className="mt-2">
-                          <DateControl
-                            value={followUpDate}
-                            onChange={(value) => {
-                              setFollowUpDate(value);
-                              setErrors((current) => ({ ...current, followUpDate: undefined }));
-                            }}
-                            min={today}
-                          />
+                {history.length > 0 && (
+                  <section className="border-t border-[#E8D8CC] pt-5">
+                    <p className="mb-4 text-sm font-semibold uppercase text-[#4B3024]">Historial de actividad</p>
+                    <div className="space-y-4">
+                      {history.map((item) => (
+                        <div key={item.id} className="flex items-start gap-3 text-sm">
+                          <div className="mt-1 h-2 w-2 rounded-full bg-[#FF7A1A]" />
+                          <div>
+                            <p className="font-semibold text-[#1F1F1F]">{item.accion}</p>
+                            {item.comentario && <p className="mt-0.5 text-[#6B625C]">{item.comentario}</p>}
+                            <p className="mt-1 text-xs text-[#8A7F78]">{new Date(item.created_at).toLocaleString('es-PE')}</p>
+                          </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  </div>
-                  <FieldError message={errors.followUpDate} />
-                  <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-[#8A6B5A]">
-                    <Info className="h-4 w-4" aria-hidden="true" />
-                    Se generara una tarea automatica en el calendario del asesor.
-                  </p>
-                </label>
-
-                <section className="border-t border-[#E8D8CC] pt-5">
-                  <p className="text-sm font-semibold uppercase text-[#4B3024]">Historial de actividad</p>
-                </section>
+                  </section>
+                )}
               </>
             ) : (
-              <div className="rounded-[16px] border border-[#E8D8CC] bg-[#FFFCFA] p-5 text-sm font-semibold text-[#6B625C]">
-                Esta venta ya se encuentra en un estado final.
+              <div className="space-y-5">
+                <div className="rounded-[16px] border border-[#E8D8CC] bg-[#FFFCFA] p-5 text-sm font-semibold text-[#6B625C]">
+                  Esta venta ya se encuentra en un estado final o no tienes permisos para cambiarlo.
+                </div>
+                {history.length > 0 && (
+                  <section className="rounded-[20px] border border-[#E8D8CC] bg-white p-5">
+                    <p className="mb-4 text-sm font-semibold uppercase text-[#4B3024]">Historial de actividad</p>
+                    <div className="space-y-4">
+                      {history.map((item) => (
+                        <div key={item.id} className="flex items-start gap-3 text-sm">
+                          <div className="mt-1 h-2 w-2 rounded-full bg-[#FF7A1A]" />
+                          <div>
+                            <p className="font-semibold text-[#1F1F1F]">{item.accion}</p>
+                            {item.comentario && <p className="mt-0.5 text-[#6B625C]">{item.comentario}</p>}
+                            <p className="mt-1 text-xs text-[#8A7F78]">{new Date(item.created_at).toLocaleString('es-PE')}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
               </div>
             )}
           </div>

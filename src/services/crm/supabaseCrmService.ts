@@ -160,7 +160,58 @@ export const supabaseCrmService: CrmDataService = {
     const existing = payload.id ? snapshot.profiles.find((profile) => profile.id === payload.id) : undefined;
 
     if (!existing) {
-      throw new Error('Para crear usuarios en Supabase se necesita una Edge Function con service role.');
+      if (!payload.password) throw new Error('Se requiere contraseña para crear un usuario nuevo.');
+      
+      const { data: authData, error: authError } = await client.auth.signUp({
+        email: payload.correo,
+        password: payload.password,
+      });
+
+      if (authError) throw new Error(`Error creando usuario: ${authError.message}`);
+      if (!authData.user) throw new Error('No se pudo crear el usuario.');
+
+      const { data: newProfile, error: fetchError } = await client
+        .from('perfiles')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+        
+      if (fetchError) {
+        // If the profile wasn't auto-created via triggers, let's insert it
+        const { data: inserted, error: insertError } = await client
+          .from('perfiles')
+          .insert({
+            id: authData.user.id,
+            nombres: payload.nombres,
+            dni: payload.dni ?? '',
+            correo: payload.correo,
+            correo_recuperacion: payload.correo_recuperacion,
+            rol: payload.rol,
+            activo: payload.activo,
+          })
+          .select('*')
+          .single();
+
+        if (insertError) throw insertError;
+        return normalizeProfile(inserted as Profile);
+      }
+      
+      // Update the auto-created profile if it exists
+      const { data: updated, error: updateError } = await client
+        .from('perfiles')
+        .update({
+          nombres: payload.nombres,
+          dni: payload.dni ?? '',
+          correo_recuperacion: payload.correo_recuperacion,
+          rol: payload.rol,
+          activo: payload.activo,
+        })
+        .eq('id', authData.user.id)
+        .select('*')
+        .single();
+
+      if (updateError) throw updateError;
+      return normalizeProfile(updated as Profile);
     }
 
     const { data, error } = await client

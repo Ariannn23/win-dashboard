@@ -1,14 +1,11 @@
 import { STATUS_LABELS } from '@/shared/lib/constants';
 import type { Profile, Sale, SaleStatus } from '@/types';
 
-export type ClientStatus = 'ACTIVO' | 'SUSPENDIDO' | 'MOROSO' | 'INACTIVO';
+export type ClientStatus = 'ACTIVO';
 export type ClientType = 'HOGAR' | 'EMPRESA';
 
 export const CLIENT_STATUS_LABELS: Record<ClientStatus, string> = {
   ACTIVO: 'Activo',
-  SUSPENDIDO: 'Suspendido',
-  MOROSO: 'Moroso',
-  INACTIVO: 'Inactivo',
 };
 
 export function saleAmount(sale: Sale) {
@@ -39,10 +36,7 @@ export function planGroup(plan: string) {
 }
 
 export function clientStatus(status: SaleStatus): ClientStatus {
-  if (status === 'INSTALADO') return 'ACTIVO';
-  if (status === 'CANCELADO') return 'INACTIVO';
-  if (status === 'RECHAZADO') return 'MOROSO';
-  return 'SUSPENDIDO';
+  return 'ACTIVO';
 }
 
 export function clientType(sale: Sale): ClientType {

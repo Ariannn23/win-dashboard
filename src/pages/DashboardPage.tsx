@@ -1,7 +1,6 @@
 import {
   AlertTriangle,
   ArrowUpRight,
-  Download,
   Gauge,
   Plus,
   ShoppingCart,
@@ -120,11 +119,10 @@ export function DashboardPage() {
       progress: 75,
     },
     {
-      icon: AlertTriangle,
-      label: 'Tickets pendientes',
-      value: stats.pending + stats.rejected + stats.canceled,
-      detail: 'hoy',
-      badge: 'Critico',
+      icon: ShoppingCart,
+      label: 'Ticket Promedio',
+      value: `S/${stats.total ? Math.round(monthlyAmount / stats.total).toLocaleString('es-PE') : 0}`,
+      detail: 'por venta',
     },
   ];
 
@@ -140,22 +138,6 @@ export function DashboardPage() {
             <span className="font-extrabold text-[#C94A00]">{stats.pending} nuevas activaciones</span>{' '}
             pendientes de gestion.
           </p>
-        </div>
-        <div className="flex flex-wrap gap-2.5">
-          <button
-            type="button"
-            className="flex h-11 items-center gap-2 rounded-[14px] border border-[#E8D8CC] bg-[#F4E7DE] px-4 text-xs font-extrabold text-[#6B625C] hover:border-[#FF7A1A]"
-          >
-            <Download className="h-4 w-4" aria-hidden="true" />
-            Exportar Reporte
-          </button>
-          <button
-            type="button"
-            className="flex h-11 items-center gap-2 rounded-[14px] bg-gradient-to-r from-[#F24A00] to-[#C94A00] px-4 text-xs font-extrabold text-white shadow-[0_14px_22px_rgba(201,74,0,0.20)]"
-          >
-            <Plus className="h-5 w-5" aria-hidden="true" />
-            Nuevo Cliente
-          </button>
         </div>
       </section>
 
@@ -232,44 +214,7 @@ export function DashboardPage() {
             </div>
           </section>
 
-          <section className="rounded-[20px] border border-[#EDE4DC] bg-white p-6 shadow-[0_14px_34px_rgba(91,47,20,0.055)]">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-              <h2 className="text-base font-extrabold text-[#1F1F1F]">Cobros Recientes</h2>
-              <div className="flex gap-3">
-                <input
-                  placeholder="Filtrar facturas..."
-                  className="h-10 rounded-[12px] border border-[#E8D8CC] bg-[#FFFCFA] px-3 text-sm font-semibold outline-none focus:border-[#FF7A1A]"
-                />
-                <button
-                  type="button"
-                  className="flex h-10 items-center gap-2 rounded-[12px] bg-[#C94A00] px-4 text-xs font-extrabold text-white"
-                >
-                  <Plus className="h-4 w-4" aria-hidden="true" />
-                  Nuevo Cobro
-                </button>
-              </div>
-            </div>
-            <div className="mt-5 divide-y divide-[#EDE4DC]">
-              {[
-                ['#INV-9402', 'Roberto Sanchez', '24 Oct, 2026', 'PAGADO', 'S/85.00'],
-                ['#INV-9403', 'Carla Fuentes', '23 Oct, 2026', 'PENDIENTE', 'S/120.00'],
-              ].map(([id, client, date, status, amount]) => (
-                <div key={id} className="grid grid-cols-[1fr_1.2fr_1fr_0.8fr_0.7fr] items-center py-3.5 text-sm">
-                  <span className="font-extrabold text-[#1F1F1F]">{id}</span>
-                  <span className="font-semibold text-[#4B3024]">{client}</span>
-                  <span className="font-semibold text-[#6B625C]">{date}</span>
-                  <span
-                    className={`w-fit rounded-full px-4 py-1.5 text-xs font-extrabold ${
-                      status === 'PAGADO' ? 'bg-[#DDF8E9] text-[#2FA66A]' : 'bg-[#FFF1C7] text-[#B46A00]'
-                    }`}
-                  >
-                    {status}
-                  </span>
-                  <span className="text-right font-extrabold text-[#1F1F1F]">{amount}</span>
-                </div>
-              ))}
-            </div>
-          </section>
+          <TopPlansCard sales={sales} />
         </div>
 
         <aside className="space-y-4">
@@ -296,14 +241,6 @@ export function DashboardPage() {
           <GoalCard />
         </aside>
       </section>
-
-      <button
-        type="button"
-        title="Accion rapida"
-        className="fixed bottom-6 right-6 grid h-13 w-13 place-items-center rounded-full bg-gradient-to-br from-[#F24A00] to-[#C94A00] p-3 text-white shadow-[0_14px_26px_rgba(201,74,0,0.25)]"
-      >
-        <Plus className="h-6 w-6" aria-hidden="true" />
-      </button>
     </div>
   );
 }
@@ -486,31 +423,65 @@ function GoalCard() {
         <circle cx="60" cy="60" r="18" stroke="currentColor" strokeWidth="10" />
         <path d="M60 17v20M60 83v20M17 60h20M83 60h20" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
       </svg>
-      <svg className="absolute bottom-0 left-0 h-24 w-full text-white/12" viewBox="0 0 320 96" fill="none" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M0 74C42 44 69 70 105 42C143 12 180 38 213 28C253 15 280 32 320 8V96H0V74Z" fill="currentColor" />
-      </svg>
       <div className="relative">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-white/75">Meta trimestral</p>
             <h2 className="mt-1 text-2xl font-extrabold tracking-[-0.03em]">1.5K ventas</h2>
           </div>
-          <span className="rounded-full bg-white/18 px-3 py-1 text-xs font-extrabold ring-1 ring-white/22">84%</span>
+          <span className="rounded-full bg-white/18 px-3 py-1 text-xs font-extrabold ring-1 ring-[#FFB48A]/60 shadow-[0_0_15px_rgba(255,180,138,0.35)]">84%</span>
         </div>
         <p className="mt-4 max-w-xs text-sm font-semibold leading-6 text-white/88">
           Faltan 240 ventas para cerrar la meta. Mantener el ritmo actual deja el objetivo al alcance.
         </p>
-        <div className="mt-6 rounded-[16px] bg-white/14 p-3 ring-1 ring-white/18">
-          <div className="flex items-center justify-between text-xs font-extrabold text-white/86">
+        <div className="mt-6 rounded-[16px] bg-white/14 p-3 ring-1 ring-[#FFB48A]/60 shadow-[0_0_15px_rgba(255,180,138,0.35)]">
+          <div className="flex items-center justify-between text-xs font-extrabold text-white/90">
             <span>1,260 logradas</span>
             <span>1,500 objetivo</span>
           </div>
-          <div className="mt-3 h-3 overflow-hidden rounded-full bg-[#8A2D00]/45">
-            <div className="relative h-full w-[84%] rounded-full bg-white">
-              <span className="absolute right-0 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-4 border-white bg-[#FF7A1A] shadow-[0_6px_16px_rgba(31,31,31,0.22)]" />
+          <div className="mt-3 relative h-3 rounded-full bg-[#8A2D00]/45">
+            <div className="absolute left-0 top-0 h-full rounded-full bg-white" style={{ width: '84%' }}>
+              <span className="absolute right-0 top-1/2 h-5 w-5 -translate-y-1/2 translate-x-1/2 rounded-full border-[3px] border-white bg-[#FF7A1A] shadow-[0_4px_10px_rgba(0,0,0,0.3)]" />
             </div>
           </div>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function TopPlansCard({ sales }: { sales: Sale[] }) {
+  const planStats = Object.entries(
+    sales.reduce((acc, sale) => {
+      const plan = sale.plan_contratar;
+      acc[plan] = (acc[plan] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  ).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  const total = sales.length || 1;
+
+  return (
+    <section className="rounded-[20px] border border-[#EDE4DC] bg-white p-6 shadow-[0_14px_34px_rgba(91,47,20,0.055)]">
+      <h2 className="text-base font-extrabold text-[#1F1F1F]">Planes mas vendidos</h2>
+      <div className="mt-5 space-y-4">
+        {planStats.length > 0 ? (
+          planStats.map(([plan, count]) => {
+            const percent = Math.round((count / total) * 100);
+            return (
+              <div key={plan}>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-extrabold text-[#4B3024]">{plan}</span>
+                  <span className="font-semibold text-[#6B625C]">{count} ventas ({percent}%)</span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#F3EAE3]">
+                  <div className="h-full rounded-full bg-gradient-to-r from-[#F24A00] to-[#C94A00]" style={{ width: `${percent}%` }} />
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <p className="text-sm font-semibold text-[#8A7F78]">No hay ventas registradas aun.</p>
+        )}
       </div>
     </section>
   );

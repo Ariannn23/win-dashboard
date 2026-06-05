@@ -3,7 +3,10 @@ import {
   CheckCircle2,
   Download,
   Edit3,
+  Eraser,
+  ExternalLink,
   Eye,
+  FileText,
   Mail,
   MapPin,
   Phone,
@@ -30,20 +33,16 @@ import {
   type ClientType,
 } from '@/shared/lib/sales';
 import { ComboBox, type SelectOption } from '@/shared/ui/FormControls';
-import { Modal } from '@/shared/ui/Modal';
 import { PAGE_SIZE, Pagination } from '@/shared/ui/Pagination';
 import { PageSkeleton } from '@/shared/ui/Skeleton';
+import { planService, type Plan } from '@/services/crm/planService';
 import type { Sale } from '@/types';
 
-type ClientStatusFilter = 'TODOS' | ClientStatus;
 type ClientTypeFilter = 'TODOS' | ClientType;
 
 function statusTone(status: ClientStatus) {
   return {
     ACTIVO: 'bg-[#DDF8E9] text-[#009A4E]',
-    SUSPENDIDO: 'bg-[#FFF2E7] text-[#D63B00]',
-    MOROSO: 'bg-[#FFE8E8] text-[#D64545]',
-    INACTIVO: 'bg-[#F3EAE3] text-[#6B625C]',
   }[status];
 }
 
@@ -56,13 +55,17 @@ export function ClientsPage() {
   const { isLoading, visibleSales } = useCrm();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
-  const [status, setStatus] = useState<ClientStatusFilter>('TODOS');
   const [type, setType] = useState<ClientTypeFilter>('TODOS');
   const [plan, setPlan] = useState('TODOS');
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [page, setPage] = useState(1);
+  const [globalPlans, setGlobalPlans] = useState<Plan[]>([]);
 
-  const clients = useMemo(() => user ? visibleSales(user) : [], [user, visibleSales]);
+  useEffect(() => {
+    planService.getPlans().then(setGlobalPlans).catch(console.error);
+  }, []);
+
+  const clients = useMemo(() => user ? visibleSales(user).filter(s => s.estado === 'INSTALADO') : [], [user, visibleSales]);
 
   const filteredClients = useMemo(() => {
     const text = query.trim().toLowerCase();
@@ -75,12 +78,11 @@ export function ClientsPage() {
         sale.numero_documento.includes(text) ||
         sale.correo_cliente.toLowerCase().includes(text) ||
         sale.celular_principal.includes(text);
-      const matchesStatus = status === 'TODOS' || saleStatus === status;
       const matchesType = type === 'TODOS' || saleType === type;
       const matchesPlan = plan === 'TODOS' || sale.plan_contratar === plan;
-      return matchesText && matchesStatus && matchesType && matchesPlan;
+      return matchesText && matchesType && matchesPlan;
     });
-  }, [clients, plan, query, status, type]);
+  }, [clients, plan, query, type]);
   const totalPages = Math.max(1, Math.ceil(filteredClients.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const pagedClients = filteredClients.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -92,9 +94,7 @@ export function ClientsPage() {
   if (!user) return null;
   if (isLoading) return <PageSkeleton cards={4} tableRows={6} tableColumns={8} />;
 
-  const plans = Array.from(new Set(clients.map((sale) => sale.plan_contratar)));
-  const active = clients.filter((sale) => clientStatus(sale.estado) === 'ACTIVO').length;
-  const suspended = clients.filter((sale) => clientStatus(sale.estado) === 'SUSPENDIDO').length;
+
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   const newThisMonth = clients.filter((sale) => {
@@ -104,7 +104,6 @@ export function ClientsPage() {
 
   const clearFilters = () => {
     setQuery('');
-    setStatus('TODOS');
     setType('TODOS');
     setPlan('TODOS');
   };
@@ -120,15 +119,13 @@ export function ClientsPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2">
         <ClientMetric icon={UsersRound} label="Total de clientes" value={clients.length} trend="12.5%" tone="orange" />
-        <ClientMetric icon={CheckCircle2} label="Clientes activos" value={active} trend="10.3%" tone="green" />
-        <ClientMetric icon={Calendar} label="Suspendidos" value={suspended} trend="3.4%" tone="amber" negative />
         <ClientMetric icon={Plus} label="Nuevos este mes" value={newThisMonth} trend="8.7%" tone="blue" />
       </section>
 
       <section className="rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.045)]">
-        <div className="grid gap-4 xl:grid-cols-[1.5fr_0.75fr_0.75fr_1fr]">
+        <div className="grid items-end gap-4 xl:grid-cols-[1.5fr_0.75fr_0.75fr_auto]">
           <label className="relative block">
             <span className="mb-2 block text-xs font-extrabold uppercase tracking-[0.08em] text-[#8A7F78]">Buscar cliente</span>
             <Search className="pointer-events-none absolute left-4 top-[41px] h-4 w-4 text-[#8A7F78]" aria-hidden="true" />
@@ -139,12 +136,6 @@ export function ClientsPage() {
               className="h-12 w-full rounded-[14px] border border-[#E8D8CC] bg-[#FFFCFA] pl-11 pr-4 text-sm font-semibold text-[#1F1F1F] outline-none transition focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70"
             />
           </label>
-          <FilterSelect
-            label="Estado"
-            value={status}
-            onChange={(value) => setStatus(value as ClientStatusFilter)}
-            options={[{ value: 'TODOS', label: 'Todos' }, ...Object.entries(CLIENT_STATUS_LABELS).map(([value, label]) => ({ value, label }))]}
-          />
           <FilterSelect
             label="Tipo"
             value={type}
@@ -159,34 +150,25 @@ export function ClientsPage() {
             label="Plan"
             value={plan}
             onChange={setPlan}
-            options={[{ value: 'TODOS', label: 'Todos' }, ...plans.map((item) => ({ value: item, label: item }))]}
+            options={[{ value: 'TODOS', label: 'Todos' }, ...globalPlans.map((p) => ({ value: p.nombre, label: p.nombre }))]}
           />
-        </div>
-
-        <div className="mt-5 flex flex-wrap justify-between gap-3 border-t border-[#F3EAE3] pt-5">
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              className="flex h-11 items-center gap-2 rounded-[13px] bg-[#A83B00] px-5 text-sm font-extrabold text-white shadow-[0_10px_18px_rgba(168,59,0,0.18)]"
-            >
-              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-              Filtrar
-            </button>
+          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={clearFilters}
-              className="h-11 rounded-[13px] border border-[#E8D8CC] bg-white px-5 text-sm font-extrabold text-[#6B625C] hover:bg-[#FFF2E7]"
+              className="flex h-12 items-center gap-2 rounded-[14px] border border-[#E8D8CC] bg-white px-5 text-sm font-extrabold text-[#6B625C] hover:bg-[#FFF2E7] hover:text-[#A83B00]"
             >
-              Limpiar filtros
+              <Eraser className="h-4 w-4" aria-hidden="true" />
+              Limpiar
+            </button>
+            <button
+              type="button"
+              className="flex h-12 items-center gap-2 rounded-[14px] border border-[#E8D8CC] bg-white px-5 text-sm font-extrabold text-[#4B3024] hover:bg-[#FFF2E7]"
+            >
+              <Download className="h-4 w-4" aria-hidden="true" />
+              Exportar
             </button>
           </div>
-          <button
-            type="button"
-            className="flex h-11 items-center gap-2 rounded-[13px] border border-[#E8D8CC] bg-white px-5 text-sm font-extrabold text-[#4B3024] hover:bg-[#FFF2E7]"
-          >
-            <Download className="h-4 w-4" aria-hidden="true" />
-            Exportar
-          </button>
         </div>
       </section>
 
@@ -323,6 +305,7 @@ function FilterSelect({
 }
 
 function ClientDetailPanel({ sale, onClose }: { sale: Sale; onClose: () => void }) {
+  const [activeTab, setActiveTab] = useState<'historial' | 'documentos'>('historial');
   const saleStatus = clientStatus(sale.estado);
   const saleType = clientType(sale);
   const monthlyPrice = saleAmount(sale);
@@ -405,24 +388,39 @@ function ClientDetailPanel({ sale, onClose }: { sale: Sale; onClose: () => void 
 
         <section>
           <div className="flex gap-5 border-b border-[#E8D8CC] text-sm font-extrabold">
-            <button type="button" className="border-b-2 border-[#C94A00] pb-2 text-[#C94A00]">Historial</button>
-            <button type="button" className="pb-2 text-[#6B625C]">Ventas</button>
-            <button type="button" className="pb-2 text-[#6B625C]">Tickets</button>
-            <button type="button" className="pb-2 text-[#6B625C]">Documentos</button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('historial')}
+              className={`pb-2 ${activeTab === 'historial' ? 'border-b-2 border-[#C94A00] text-[#C94A00]' : 'text-[#6B625C]'}`}
+            >
+              Historial
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('documentos')}
+              className={`pb-2 ${activeTab === 'documentos' ? 'border-b-2 border-[#C94A00] text-[#C94A00]' : 'text-[#6B625C]'}`}
+            >
+              Documentos
+            </button>
           </div>
-          <div className="mt-4 space-y-4">
-            <TimelineItem tone="blue" title="Venta creada" detail={`por ${sale.nombres_cliente}`} date={formatShortDate(sale.created_at)} />
-            <TimelineItem tone="green" title={STATUS_LABELS[sale.estado]} detail="Estado actual del servicio" date={formatShortDate(sale.updated_at)} />
-            <TimelineItem tone="orange" title="Plan contratado" detail={sale.plan_contratar} date={formatShortDate(sale.created_at)} />
+          <div className="mt-4">
+            {activeTab === 'historial' ? (
+              <div className="space-y-4">
+                <TimelineItem tone="blue" title="Venta creada" detail={`por ${sale.nombres_cliente}`} date={formatShortDate(sale.created_at)} />
+                <TimelineItem tone="green" title={STATUS_LABELS[sale.estado]} detail="Estado actual del servicio" date={formatShortDate(sale.updated_at)} />
+                <TimelineItem tone="orange" title="Plan contratado" detail={sale.plan_contratar} date={formatShortDate(sale.created_at)} />
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <DocumentCard title="DNI Frontal / Posterior" url={sale.foto_dni} />
+                <DocumentCard title="Recibo de luz / agua" url={sale.foto_recibo} />
+                <DocumentCard title="Selfie con DNI" url={sale.foto_selfie} />
+              </div>
+            )}
           </div>
         </section>
       </div>
 
-      <div className="grid shrink-0 gap-3 border-t border-[#E8D8CC] bg-[#FFFCFA] p-5 sm:grid-cols-1">
-        <button type="button" className="h-11 rounded-[13px] bg-gradient-to-r from-[#F24A00] to-[#C94A00] text-sm font-extrabold text-white shadow-[0_12px_18px_rgba(201,74,0,0.18)]">
-          Crear ticket
-        </button>
-      </div>
     </Modal>
   );
 }
@@ -475,5 +473,40 @@ function TimelineItem({ tone, title, detail, date }: { tone: 'blue' | 'green' | 
         <p className="mt-1 text-[11px] font-semibold text-[#8A7F78]">{date}</p>
       </div>
     </article>
+  );
+}
+
+function DocumentCard({ title, url }: { title: string; url?: string | null }) {
+  if (!url) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-[16px] border border-dashed border-[#D8CCC4] bg-[#FFFCFA] p-6 text-center">
+        <FileText className="mb-2 h-6 w-6 text-[#D8CCC4]" aria-hidden="true" />
+        <p className="text-sm font-extrabold text-[#8A7F78]">{title}</p>
+        <p className="mt-1 text-xs font-semibold text-[#D8CCC4]">No adjuntado</p>
+      </div>
+    );
+  }
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="group relative flex flex-col items-center justify-center overflow-hidden rounded-[16px] border border-[#E8D8CC] bg-white p-2 transition hover:border-[#FFB48A]"
+    >
+      <div className="relative w-full aspect-video overflow-hidden rounded-[10px] bg-[#F3EAE3]">
+        {url.match(/\.(jpeg|jpg|gif|png)$/i) || url.startsWith('blob:') || url.includes('supabase.co') ? (
+          <img src={url} alt={title} className="h-full w-full object-cover" />
+        ) : (
+          <div className="grid h-full w-full place-items-center">
+            <FileText className="h-8 w-8 text-[#A83B00]" aria-hidden="true" />
+          </div>
+        )}
+        <div className="absolute inset-0 grid place-items-center bg-[#1F1F1F]/40 opacity-0 backdrop-blur-sm transition group-hover:opacity-100">
+          <ExternalLink className="h-6 w-6 text-white" aria-hidden="true" />
+        </div>
+      </div>
+      <p className="mt-3 pb-1 text-sm font-extrabold text-[#4B3024]">{title}</p>
+    </a>
   );
 }

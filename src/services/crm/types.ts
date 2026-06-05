@@ -1,4 +1,4 @@
-import type { Profile, Sale, SaleStatus, StatusHistory } from '@/types';
+import type { Profile, Sale, SaleStatus, StatusHistory, Role } from '@/types';
 
 export interface CrmSnapshot {
   profiles: Profile[];
@@ -10,7 +10,16 @@ export type SaleUpsertPayload =
   Omit<Sale, 'id' | 'created_at' | 'updated_at' | 'estado' | 'creado_por'> &
     Partial<Pick<Sale, 'id' | 'estado' | 'creado_por'>>;
 
-export type ProfileUpsertPayload = Omit<Profile, 'id' | 'created_at'> & Partial<Pick<Profile, 'id'>>;
+export interface ProfileUpsertPayload {
+  id?: string;
+  nombres: string;
+  dni?: string;
+  correo: string;
+  correo_recuperacion: string;
+  rol: Role;
+  activo: boolean;
+  password?: string;
+}
 
 export interface StatusChangeResult {
   sale: Sale;

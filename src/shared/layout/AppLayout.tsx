@@ -1,14 +1,10 @@
 import {
   BarChart3,
-  Bell,
   ChevronLeft,
   ChevronRight,
-  HelpCircle,
   History,
   LayoutGrid,
   LogOut,
-  MoreVertical,
-  Search,
   Settings,
   ShoppingCart,
   UserRound,
@@ -54,7 +50,9 @@ export function AppLayout() {
         { to: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
         { to: '/clientes', label: 'Clientes', icon: Users },
         { to: '/ventas', label: 'Ventas', icon: ShoppingCart },
-        { to: '/planes', label: 'Planes', icon: Wifi }
+        { to: '/planes', label: 'Planes', icon: Wifi },
+        { to: '/reportes', label: 'Reportes', icon: BarChart3 },
+        { to: '/usuarios', label: 'Usuarios', icon: UserRound }
       ];
     }
     
@@ -151,63 +149,28 @@ export function AppLayout() {
         </nav>
 
         <div className={`relative border-t border-[#EDE4DC] p-4 ${collapsed ? 'px-3' : ''}`}>
-          <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
-            <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#FFE2CC] text-xs font-extrabold text-[#C94A00]">
-              {initials(user.nombres)}
-              <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-[#2FA66A]" />
-            </div>
-            <div className={`min-w-0 flex-1 ${collapsed ? 'hidden' : 'block'}`}>
-              <p className="truncate text-xs font-extrabold text-[#1F1F1F]">{user.nombres}</p>
-              <p className="text-xs font-bold text-[#6B625C]">{ROLE_LABELS[user.rol]}</p>
-            </div>
-            <button
-              type="button"
-              onClick={logout}
-              title="Cerrar sesion"
-              className={`grid h-8 w-8 place-items-center rounded-xl text-[#C94A00] hover:bg-[#FFE2CC] ${
-                collapsed ? 'hidden' : ''
-              }`}
-            >
-              <LogOut className="h-5 w-5" aria-hidden="true" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={logout}
+            className={`flex h-12 w-full items-center justify-center gap-3 rounded-[15px] border border-[#E8D8CC] text-sm font-extrabold text-[#C94A00] transition hover:bg-[#FFF2E7] ${
+              collapsed ? 'px-0' : 'px-4'
+            }`}
+            title="Cerrar sesion"
+          >
+            <LogOut className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+            <span className={collapsed ? 'hidden' : 'block'}>Cerrar Sesion</span>
+          </button>
         </div>
       </aside>
 
       <div className={`transition-[padding] duration-300 ${collapsed ? 'lg:pl-[84px]' : 'lg:pl-[260px]'}`}>
         <header className="sticky top-0 z-10 flex h-[72px] items-center justify-between border-b border-[#EDE4DC] bg-white/90 px-5 backdrop-blur lg:px-7">
-          <div className="flex w-full max-w-[650px] items-center gap-3 rounded-full border border-[#E8D8CC] bg-[#FFF7F1] px-4 py-2.5 text-[#6B625C]">
-            <Search className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
-            <input
-              type="search"
-              placeholder="Busqueda global de clientes, ventas..."
-              className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[#1F1F1F] outline-none placeholder:text-[#8A7F78]"
-            />
-            <span className="hidden rounded-md border border-[#E8D8CC] bg-white px-2 py-1 text-xs font-extrabold text-[#8A7F78] sm:inline">
-              Ctrl
-            </span>
-            <span className="hidden rounded-md border border-[#E8D8CC] bg-white px-2 py-1 text-xs font-extrabold text-[#8A7F78] sm:inline">
-              K
-            </span>
+          <div>
+            <h2 className="text-xl font-extrabold tracking-[-0.02em] text-[#1F1F1F]">
+              Hola, <span className="text-[#C94A00]">{user.nombres.split(' ')[0]}</span> 👋
+            </h2>
           </div>
-
-          <div className="ml-4 flex items-center gap-4">
-            <button
-              type="button"
-              title="Notificaciones"
-              className="relative grid h-9 w-9 place-items-center rounded-full text-[#4B3024] hover:bg-[#FFF2E7]"
-            >
-              <Bell className="h-5 w-5" aria-hidden="true" />
-              <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-[#D64545]" />
-            </button>
-            <button
-              type="button"
-              title="Ayuda"
-              className="hidden h-9 w-9 place-items-center rounded-full text-[#4B3024] hover:bg-[#FFF2E7] sm:grid"
-            >
-              <HelpCircle className="h-5 w-5" aria-hidden="true" />
-            </button>
-            <div className="hidden h-9 w-px bg-[#EDE4DC] sm:block" />
+          <div className="flex items-center gap-4">
             <div className="hidden text-right sm:block">
               <p className="text-xs font-extrabold text-[#1F1F1F]">{user.nombres}</p>
               <p className="text-xs font-extrabold uppercase text-[#C94A00]">{ROLE_LABELS[user.rol]}</p>
@@ -215,13 +178,6 @@ export function AppLayout() {
             <div className="grid h-10 w-10 place-items-center rounded-full bg-[#FFE2CC] text-xs font-extrabold text-[#C94A00] ring-2 ring-white">
               {initials(user.nombres)}
             </div>
-            <button
-              type="button"
-              title="Mas opciones"
-              className="hidden h-9 w-9 place-items-center rounded-full text-[#6B625C] hover:bg-[#FFF2E7] md:grid"
-            >
-              <MoreVertical className="h-5 w-5" aria-hidden="true" />
-            </button>
           </div>
         </header>
         <main className="mx-auto w-full max-w-[1440px] px-5 py-6 lg:px-7">

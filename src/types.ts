@@ -15,6 +15,7 @@ export type HousingType = 'Casa' | 'Multifamiliar';
 export interface Profile {
   id: string;
   nombres: string;
+  dni?: string;
   correo: string;
   correo_recuperacion: string;
   rol: Role;

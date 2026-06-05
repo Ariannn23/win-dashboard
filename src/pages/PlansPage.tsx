@@ -4,6 +4,7 @@ import { useCrm } from '@/app/providers/CrmProvider';
 import {
   CheckCircle2,
   Edit3,
+  Eraser,
   Plus,
   Power,
   Search,
@@ -126,8 +127,9 @@ export function PlansPage() {
               setQuery('');
               setStatus('TODOS');
             }}
-            className="h-12 rounded-[14px] border border-[#E8D8CC] bg-white px-5 text-sm font-extrabold text-[#6B625C] hover:bg-[#FFF2E7]"
+            className="flex h-12 items-center gap-2 rounded-[14px] border border-[#E8D8CC] bg-white px-5 text-sm font-extrabold text-[#6B625C] hover:bg-[#FFF2E7] hover:text-[#A83B00]"
           >
+            <Eraser className="h-4 w-4" aria-hidden="true" />
             Limpiar
           </button>
         </div>

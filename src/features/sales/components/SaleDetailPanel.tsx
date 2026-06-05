@@ -1,7 +1,7 @@
 import { Mail, MapPin, Phone, UserRound, Wifi, X } from 'lucide-react';
 import { Modal } from '@/shared/ui/Modal';
 import { STATUS_LABELS } from '@/shared/lib/constants';
-import { formatDate, initials } from '@/shared/lib/format';
+import { formatDate, formatDateOnly, initials } from '@/shared/lib/format';
 import type { Profile, Sale } from '@/types';
 
 interface SaleDetailPanelProps {
@@ -50,13 +50,13 @@ export function SaleDetailPanel({ sale, profiles, onClose }: SaleDetailPanelProp
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid gap-4 md:grid-cols-2">
           <InfoCard icon={Mail} label="Correo" value={sale.correo_cliente} />
           <InfoCard icon={Phone} label="Celular principal" value={sale.celular_principal} />
           <InfoCard icon={Phone} label="Celular referencia" value={sale.celular_referencia} />
           <InfoCard icon={UserRound} label="Titular linea" value={sale.titular_linea} />
-          <InfoCard icon={UserRound} label="Lugar nacimiento" value={sale.lugar_nacimiento} />
-          <InfoCard icon={UserRound} label="Fecha nacimiento" value={formatDate(sale.fecha_nacimiento)} />
+          <InfoCard icon={UserRound} label="Lugar nacimiento" value={sale.lugar_nacimiento.charAt(0).toUpperCase() + sale.lugar_nacimiento.slice(1).toLowerCase()} />
+          <InfoCard icon={UserRound} label="Fecha nacimiento" value={formatDateOnly(sale.fecha_nacimiento)} />
         </section>
 
         <section className="rounded-[20px] border border-[#EDE4DC] bg-white p-5">
