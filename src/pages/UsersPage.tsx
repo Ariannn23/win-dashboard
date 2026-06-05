@@ -1,5 +1,5 @@
 import { Clock3, Edit3, Power, PowerOff, Plus, Search, ShieldCheck, UserCog, UsersRound } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useCrm } from '@/app/providers/CrmProvider';
@@ -7,6 +7,7 @@ import { UserFormModal } from '@/features/users/components/UserFormModal';
 import { ROLE_LABELS } from '@/shared/lib/constants';
 import { initials } from '@/shared/lib/format';
 import { ComboBox } from '@/shared/ui/FormControls';
+import { PAGE_SIZE, Pagination } from '@/shared/ui/Pagination';
 import { PageSkeleton } from '@/shared/ui/Skeleton';
 import { useToast } from '@/shared/ui/Toast';
 import { canManageUsers } from '@/shared/lib/permissions';
@@ -21,6 +22,7 @@ export function UsersPage() {
   const [query, setQuery] = useState('');
   const [role, setRole] = useState<Role | 'TODOS'>('TODOS');
   const [status, setStatus] = useState<'TODOS' | 'ACTIVO' | 'INACTIVO'>('TODOS');
+  const [page, setPage] = useState(1);
 
   if (!user || !canManageUsers(user)) return <Navigate to="/dashboard" replace />;
   if (isLoading) return <PageSkeleton cards={3} tableRows={5} tableColumns={7} />;
@@ -42,6 +44,13 @@ export function UsersPage() {
       return matchesText && matchesRole && matchesStatus;
     });
   }, [profiles, query, role, status]);
+  const totalPages = Math.max(1, Math.ceil(filteredProfiles.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedProfiles = filteredProfiles.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, role, status]);
 
   const admins = profiles.filter((profile) => profile.rol === 'ADMIN').length;
   const activeAdmins = profiles.filter((profile) => profile.rol === 'ADMIN' && profile.activo).length;
@@ -146,7 +155,7 @@ export function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EDE4DC]">
-              {filteredProfiles.map((profile, index) => (
+              {pagedProfiles.map((profile, index) => (
                 <tr key={profile.id} className="transition hover:bg-[#FFF8F3]">
                   <td className="px-1 py-4">
                     <div className="flex items-center gap-4">
@@ -167,7 +176,7 @@ export function UsersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-4 font-semibold text-[#4B3024]">
-                    {index < 4 ? '15/05/2026 9:18 AM' : '14/05/2026 5:30 PM'}
+                    {(currentPage - 1) * PAGE_SIZE + index < 4 ? '15/05/2026 9:18 AM' : '14/05/2026 5:30 PM'}
                   </td>
                   <td className="px-1 py-4">
                     <div className="flex justify-end gap-1">
@@ -202,23 +211,8 @@ export function UsersPage() {
           </table>
         </div>
 
-        <div className="mt-6 flex items-center justify-between border-t border-[#E0BDAA] pt-5 text-sm font-semibold text-[#4B3024]">
-          <p>Mostrando 1 a {filteredProfiles.length} de {profiles.length} usuarios</p>
-          <div className="flex items-center gap-2">
-            {[1, 2, 3].map((page) => (
-              <button
-                key={page}
-                type="button"
-                className={`grid h-9 w-9 place-items-center rounded-[12px] border ${
-                  page === 1
-                    ? 'border-[#A83B00] bg-[#A83B00] text-white'
-                    : 'border-[#E8D8CC] bg-white text-[#4B3024]'
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-          </div>
+        <div className="-mx-6 -mb-6 mt-6">
+          <Pagination page={currentPage} totalItems={filteredProfiles.length} itemLabel="usuarios" onPageChange={setPage} />
         </div>
       </section>
 

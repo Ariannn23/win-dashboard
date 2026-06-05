@@ -1,9 +1,10 @@
 import { Edit3, Eye, History, MoreHorizontal, RefreshCw, Wifi } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { initials } from '@/shared/lib/format';
 import { canEditSale } from '@/shared/lib/permissions';
 import { EmptyState } from '@/shared/ui/EmptyState';
+import { PAGE_SIZE, Pagination } from '@/shared/ui/Pagination';
 import type { Profile, Sale } from '@/types';
 
 interface SalesTableProps {
@@ -18,7 +19,15 @@ interface SalesTableProps {
 
 export function SalesTable({ sales, profiles, user, onEdit, onStatus, onView, onHistory }: SalesTableProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const getName = (id: string) => profiles.find((profile) => profile.id === id)?.nombres ?? 'Sin asignar';
+  const totalPages = Math.max(1, Math.ceil(sales.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedSales = sales.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [sales.length]);
 
   if (!sales.length) return <EmptyState title="No se encontraron ventas" />;
 
@@ -40,7 +49,7 @@ export function SalesTable({ sales, profiles, user, onEdit, onStatus, onView, on
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EDE4DC]">
-            {sales.map((sale, index) => (
+            {pagedSales.map((sale, index) => (
               <tr key={sale.id} className="transition hover:bg-[#FFF8F3]">
                 <td className="px-5 py-4 align-middle">
                   <span className="font-extrabold leading-5 text-[#A32800]">
@@ -48,7 +57,7 @@ export function SalesTable({ sales, profiles, user, onEdit, onStatus, onView, on
                     <br />
                     {new Date(sale.created_at).getFullYear()}-
                     <br />
-                    {String(index + 581).padStart(5, '0')}
+                    {String((currentPage - 1) * PAGE_SIZE + index + 581).padStart(5, '0')}
                   </span>
                 </td>
                 <td className="px-4 py-4 align-middle">
@@ -143,25 +152,7 @@ export function SalesTable({ sales, profiles, user, onEdit, onStatus, onView, on
         </table>
       </div>
 
-      <div className="flex items-center justify-between border-t border-[#E0BDAA] px-5 py-4 text-xs font-semibold text-[#4B3024]">
-        <p>
-          Mostrando 1 a {sales.length} de {sales.length} ventas
-        </p>
-        <div className="flex items-center gap-2">
-          <button className="grid h-10 w-10 place-items-center rounded-[12px] border border-[#E8D8CC] text-[#4B3024]" type="button">
-            1
-          </button>
-          <button className="grid h-10 w-10 place-items-center rounded-[12px] bg-[#A83B00] text-white" type="button">
-            2
-          </button>
-          <button className="grid h-10 w-10 place-items-center rounded-[12px] text-[#4B3024] hover:bg-[#FFF2E7]" type="button">
-            3
-          </button>
-          <button className="grid h-10 w-10 place-items-center rounded-[12px] text-[#4B3024] hover:bg-[#FFF2E7]" type="button">
-            4
-          </button>
-        </div>
-      </div>
+      <Pagination page={currentPage} totalItems={sales.length} itemLabel="ventas" onPageChange={setPage} />
     </section>
   );
 }

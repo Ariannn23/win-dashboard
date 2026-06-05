@@ -1,8 +1,6 @@
 import {
   Calendar,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   Download,
   Edit3,
   Eye,
@@ -16,7 +14,7 @@ import {
   Wifi,
   X,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useCrm } from '@/app/providers/CrmProvider';
@@ -33,6 +31,7 @@ import {
 } from '@/shared/lib/sales';
 import { ComboBox, type SelectOption } from '@/shared/ui/FormControls';
 import { Modal } from '@/shared/ui/Modal';
+import { PAGE_SIZE, Pagination } from '@/shared/ui/Pagination';
 import { PageSkeleton } from '@/shared/ui/Skeleton';
 import type { Sale } from '@/types';
 
@@ -61,6 +60,7 @@ export function ClientsPage() {
   const [type, setType] = useState<ClientTypeFilter>('TODOS');
   const [plan, setPlan] = useState('TODOS');
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [page, setPage] = useState(1);
 
   if (!user) return null;
   if (isLoading) return <PageSkeleton cards={4} tableRows={6} tableColumns={8} />;
@@ -93,6 +93,13 @@ export function ClientsPage() {
       return matchesText && matchesStatus && matchesType && matchesPlan;
     });
   }, [clients, plan, query, status, type]);
+  const totalPages = Math.max(1, Math.ceil(filteredClients.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedClients = filteredClients.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [plan, query, status, type]);
 
   const clearFilters = () => {
     setQuery('');
@@ -207,7 +214,7 @@ export function ClientsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EDE4DC]">
-              {filteredClients.map((sale) => {
+              {pagedClients.map((sale) => {
                 const saleStatus = clientStatus(sale.estado);
                 const saleType = clientType(sale);
                 return (
@@ -264,23 +271,7 @@ export function ClientsPage() {
           </table>
         </div>
 
-        <div className="flex flex-col items-center justify-between gap-3 border-t border-[#E0BDAA] px-5 py-4 text-xs font-semibold text-[#4B3024] sm:flex-row">
-          <p>
-            Mostrando <span className="font-extrabold">{filteredClients.length}</span>{' '}
-            {filteredClients.length === 1 ? 'cliente' : 'clientes'}
-          </p>
-          <div className="flex items-center gap-2">
-            <PageButton disabled>
-              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-            </PageButton>
-            <button className="grid h-9 w-9 place-items-center rounded-[10px] bg-[#A83B00] text-xs font-extrabold text-white" type="button">
-              1
-            </button>
-            <PageButton disabled>
-              <ChevronRight className="h-4 w-4" aria-hidden="true" />
-            </PageButton>
-          </div>
-        </div>
+        <Pagination page={currentPage} totalItems={filteredClients.length} itemLabel="clientes" onPageChange={setPage} />
       </section>
 
       {selectedSale && <ClientDetailPanel sale={selectedSale} onClose={() => setSelectedSale(null)} />}
@@ -502,17 +493,5 @@ function TimelineItem({ tone, title, detail, date }: { tone: 'blue' | 'green' | 
         <p className="mt-1 text-[11px] font-semibold text-[#8A7F78]">{date}</p>
       </div>
     </article>
-  );
-}
-
-function PageButton({ children, disabled }: { children: React.ReactNode; disabled?: boolean }) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      className="grid h-9 w-9 place-items-center rounded-[10px] text-[#6B625C] transition hover:bg-[#FFF2E7] disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      {children}
-    </button>
   );
 }

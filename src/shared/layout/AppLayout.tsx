@@ -121,27 +121,7 @@ export function AppLayout() {
           ))}
         </nav>
 
-        <div className={`relative space-y-4 border-t border-[#EDE4DC] p-4 ${collapsed ? 'px-3' : ''}`}>
-          <div className={`relative overflow-hidden rounded-[18px] border border-[#F1DAC8] bg-gradient-to-br from-[#FFF8F3] to-[#FFE2CC] p-4 shadow-[0_12px_24px_rgba(91,47,20,0.08)] ${collapsed ? 'hidden' : 'block'}`}>
-            <svg className="absolute -right-7 -top-6 h-28 w-28 opacity-25" viewBox="0 0 96 96" fill="none" aria-hidden="true">
-              <circle cx="48" cy="48" r="30" stroke="#F24A00" strokeOpacity="0.35" strokeWidth="10" />
-              <path d="M23 56c10-12 20-16 31-11 7 3 12 2 19-4" stroke="#FF7A1A" strokeOpacity="0.32" strokeWidth="8" strokeLinecap="round" />
-              <path d="M48 20v12M48 64v12M20 48h12M64 48h12" stroke="#C94A00" strokeOpacity="0.28" strokeWidth="6" strokeLinecap="round" />
-            </svg>
-            <div className="relative">
-              <span className="inline-flex rounded-full bg-white px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#C94A00] shadow-sm">
-                Impulso comercial
-              </span>
-              <p className="mt-3 text-sm font-extrabold leading-5 text-[#1F1F1F]">Prioriza zonas con mayor cierre esta semana</p>
-              <p className="mt-2 text-xs font-semibold leading-5 text-[#6B625C]">
-                Surco y San Miguel van arriba del promedio.
-              </p>
-              <div className="mt-4 flex items-center justify-between rounded-[13px] bg-white/80 px-3 py-2">
-                <span className="text-[11px] font-extrabold text-[#4B3024]">Conversion</span>
-                <span className="text-sm font-extrabold text-[#C94A00]">68%</span>
-              </div>
-            </div>
-          </div>
+        <div className={`relative border-t border-[#EDE4DC] p-4 ${collapsed ? 'px-3' : ''}`}>
           <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
             <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#FFE2CC] text-xs font-extrabold text-[#C94A00]">
               {initials(user.nombres)}

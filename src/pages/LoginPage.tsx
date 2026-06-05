@@ -19,7 +19,7 @@ import loginHero from '@/assets/login-hero.png';
 export function LoginPage() {
   const { user, login } = useAuth();
   const [correo, setCorreo] = useState('admin@win.pe');
-  const [password, setPassword] = useState('demo');
+  const [password, setPassword] = useState('password123');
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState('');
@@ -108,33 +108,33 @@ export function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <label className="block">
               <span className="text-xs font-extrabold text-[#1F1F1F]">Correo electronico</span>
-              <span className="mt-2 flex h-[48px] items-center gap-3 rounded-[13px] border border-[#E8D8CC] bg-white px-4 text-[#8B827C] transition focus-within:border-[#FF7A1A] focus-within:ring-4 focus-within:ring-[#FFE2CC]/70">
+              <span className="mt-2 flex h-[48px] items-center gap-3 rounded-[13px] border border-[#E8D8CC] bg-white px-4 text-[#8B827C] transition focus-within:border-[#D7C2B5] focus-within:bg-[#FFFCFA]">
                 <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <input
                   type="email"
                   value={correo}
                   onChange={(event) => setCorreo(event.target.value)}
                   placeholder="Ingresa tu correo electronico"
-                  className="h-full min-w-0 flex-1 border-0 bg-transparent text-sm font-semibold text-[#1F1F1F] outline-none placeholder:text-[#B7AAA2]"
+                  className="h-full min-w-0 flex-1 border-0 bg-transparent text-sm font-semibold text-[#1F1F1F] outline-none ring-0 placeholder:text-[#B7AAA2] focus:outline-none focus:ring-0"
                 />
               </span>
             </label>
             <label className="block">
               <span className="text-xs font-extrabold text-[#1F1F1F]">Contrasena</span>
-              <span className="mt-2 flex h-[48px] items-center gap-3 rounded-[13px] border border-[#E8D8CC] bg-white px-4 text-[#8B827C] transition focus-within:border-[#FF7A1A] focus-within:ring-4 focus-within:ring-[#FFE2CC]/70">
+              <span className="mt-2 flex h-[48px] items-center gap-3 rounded-[13px] border border-[#E8D8CC] bg-white px-4 text-[#8B827C] transition focus-within:border-[#D7C2B5] focus-within:bg-[#FFFCFA]">
                 <Lock className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Ingresa tu contrasena"
-                  className="h-full min-w-0 flex-1 border-0 bg-transparent text-sm font-semibold text-[#1F1F1F] outline-none placeholder:text-[#B7AAA2]"
+                  className="h-full min-w-0 flex-1 border-0 bg-transparent text-sm font-semibold text-[#1F1F1F] outline-none ring-0 placeholder:text-[#B7AAA2] focus:outline-none focus:ring-0"
                 />
                 <button
                   type="button"
                   title={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
                   onClick={() => setShowPassword((value) => !value)}
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-xl text-[#8B827C] hover:bg-[#FFE2CC] hover:text-[#C94A00]"
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-xl text-[#8B827C] transition hover:bg-[#FFF2E7] hover:text-[#C94A00] focus:outline-none focus:ring-0"
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" aria-hidden="true" />

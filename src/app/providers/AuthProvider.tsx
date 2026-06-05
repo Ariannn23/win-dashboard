@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useCrm } from '@/app/providers/CrmProvider';
-import { isSupabaseConfigured, supabase } from '@/services/supabase/client';
+import { authDataService } from '@/services/auth';
 import type { Profile } from '@/types';
 
 interface AuthContextValue {
@@ -12,59 +12,49 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const STORAGE_KEY = 'win-crm-active-user';
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { profiles } = useCrm();
+  const { profiles, reload } = useCrm();
   const [user, setUser] = useState<Profile | null>(null);
+  const reloadedUserId = useRef<string | null>(null);
 
   useEffect(() => {
-    async function restoreSession() {
-      if (isSupabaseConfigured && supabase) {
-        const { data } = await supabase.auth.getUser();
-        const email = data.user?.email?.toLowerCase();
-        const profile = email
-          ? profiles.find((item) => item.correo.toLowerCase() === email && item.activo)
-          : null;
-        setUser(profile ?? null);
-        return;
-      }
+    let mounted = true;
 
-      const storedId = localStorage.getItem(STORAGE_KEY);
-      setUser(profiles.find((profile) => profile.id === storedId && profile.activo) ?? null);
+    async function restoreSession() {
+      try {
+        const profile = await authDataService.getCurrentProfile(profiles);
+        if (!mounted) return;
+
+        setUser(profile);
+
+        if (profile && reloadedUserId.current !== profile.id) {
+          reloadedUserId.current = profile.id;
+          await reload();
+        }
+      } catch {
+        if (mounted) setUser(null);
+      }
     }
 
     void restoreSession();
-  }, [profiles]);
+
+    return () => {
+      mounted = false;
+    };
+  }, [profiles, reload]);
 
   async function login(correo: string, password = '') {
-    if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: correo,
-        password,
-      });
-      if (error) throw new Error(error.message);
-    }
-
-    const profile = profiles.find(
-      (item) => item.correo.toLowerCase() === correo.toLowerCase() && item.activo,
-    );
-    if (!profile) {
-      throw new Error('Usuario no encontrado o inactivo');
-    }
-
-    if (!isSupabaseConfigured) {
-      localStorage.setItem(STORAGE_KEY, profile.id);
-    }
+    const profile = await authDataService.signIn(correo, password, profiles);
+    reloadedUserId.current = profile.id;
     setUser(profile);
+    await reload();
   }
 
   async function logout() {
-    if (isSupabaseConfigured && supabase) {
-      await supabase.auth.signOut();
-    }
-    localStorage.removeItem(STORAGE_KEY);
+    await authDataService.signOut();
+    reloadedUserId.current = null;
     setUser(null);
+    await reload();
   }
 
   const value = useMemo(() => ({ user, profiles, login, logout }), [profiles, user]);
