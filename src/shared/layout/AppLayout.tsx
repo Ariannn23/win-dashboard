@@ -45,8 +45,17 @@ export function AppLayout() {
   const isSupervisor = user.rol === 'SUPERVISOR';
   
   const getNavItems = () => {
-    if (isAsesor) {
+    if (isAsesor || user.rol === 'BACK') {
       return [{ to: '/ventas', label: 'Ventas', icon: ShoppingCart }];
+    }
+    
+    if (isSupervisor) {
+      return [
+        { to: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
+        { to: '/clientes', label: 'Clientes', icon: Users },
+        { to: '/ventas', label: 'Ventas', icon: ShoppingCart },
+        { to: '/usuarios', label: 'Usuarios', icon: UserRound }
+      ];
     }
     
     let baseItems = navItems;
@@ -55,7 +64,7 @@ export function AppLayout() {
       baseItems = baseItems.filter(item => item.to !== '/planes');
     }
     
-    if (isAdmin || isSupervisor) {
+    if (isAdmin) {
       return [...baseItems, { to: '/usuarios', label: 'Usuarios', icon: UserRound }];
     }
     

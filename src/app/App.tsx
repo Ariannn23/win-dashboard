@@ -28,7 +28,7 @@ function RoleRoute({ element, blockedRoles }: { element: React.ReactNode; blocke
 
 function IndexRoute() {
   const { user } = useAuth();
-  if (user?.rol === 'ASESOR') return <Navigate to="/ventas" replace />;
+  if (user?.rol === 'ASESOR' || user?.rol === 'BACK') return <Navigate to="/ventas" replace />;
   return <Navigate to="/dashboard" replace />;
 }
 
@@ -46,14 +46,14 @@ const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <IndexRoute /> },
-      { path: 'dashboard', element: <RoleRoute element={<DashboardPage />} blockedRoles={['ASESOR']} /> },
-      { path: 'clientes', element: <RoleRoute element={<ClientsPage />} blockedRoles={['ASESOR']} /> },
+      { path: 'dashboard', element: <RoleRoute element={<DashboardPage />} blockedRoles={['ASESOR', 'BACK']} /> },
+      { path: 'clientes', element: <RoleRoute element={<ClientsPage />} blockedRoles={['ASESOR', 'BACK']} /> },
       { path: 'ventas', element: <SalesPage /> },
       { path: 'planes', element: <RoleRoute element={<PlansPage />} blockedRoles={['ASESOR', 'SUPERVISOR', 'BACK']} /> },
-      { path: 'reportes', element: <RoleRoute element={<ReportsPage />} blockedRoles={['ASESOR']} /> },
-      { path: 'historial', element: <RoleRoute element={<HistoryPage />} blockedRoles={['ASESOR']} /> },
+      { path: 'reportes', element: <RoleRoute element={<ReportsPage />} blockedRoles={['ASESOR', 'SUPERVISOR', 'BACK']} /> },
+      { path: 'historial', element: <RoleRoute element={<HistoryPage />} blockedRoles={['ASESOR', 'SUPERVISOR', 'BACK']} /> },
       { path: 'usuarios', element: <RoleRoute element={<UsersPage />} blockedRoles={['ASESOR', 'BACK']} /> },
-      { path: 'configuracion', element: <RoleRoute element={<SettingsPage />} blockedRoles={['ASESOR']} /> },
+      { path: 'configuracion', element: <RoleRoute element={<SettingsPage />} blockedRoles={['ASESOR', 'SUPERVISOR', 'BACK']} /> },
     ],
   },
 ]);

@@ -117,14 +117,6 @@ export function ClientsPage() {
             Administra clientes registrados desde ventas, servicio contratado y estado de conexion.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate('/ventas')}
-          className="flex h-11 items-center justify-center gap-2 rounded-[14px] bg-gradient-to-r from-[#F24A00] to-[#C94A00] px-5 text-sm font-extrabold text-white shadow-[0_14px_22px_rgba(201,74,0,0.22)]"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Nuevo cliente
-        </button>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

@@ -25,7 +25,7 @@ export const STATUS_ORDER: SaleStatus[] = [
   'INSTALADO',
 ];
 
-export const FINAL_STATUSES: SaleStatus[] = ['INSTALADO', 'RECHAZADO', 'CANCELADO'];
+export const FINAL_STATUSES: SaleStatus[] = ['INSTALADO', 'CANCELADO'];
 
 export const PLAN_OPTIONS = [
   '350 MBPS + FONOWIN',

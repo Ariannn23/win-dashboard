@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { planService, type Plan } from '@/services/crm/planService';
-import { Plus } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
+import { Modal } from '@/shared/ui/Modal';
 
 export function PlansPage() {
   const [planes, setPlanes] = useState<Plan[]>([]);
   const [newPlanName, setNewPlanName] = useState('');
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     loadPlanes();
@@ -25,6 +27,7 @@ export function PlansPage() {
     try {
       await planService.createPlan(newPlanName.trim());
       setNewPlanName('');
+      setShowModal(false);
       loadPlanes();
     } catch (error) {
       console.error(error);
@@ -52,22 +55,13 @@ export function PlansPage() {
       </div>
 
       <div className="rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.045)]">
-        <form onSubmit={handleAdd} className="mb-6 flex gap-4">
-          <input
-            type="text"
-            value={newPlanName}
-            onChange={(e) => setNewPlanName(e.target.value)}
-            placeholder="Nombre del nuevo plan"
-            className="flex-1 rounded-[14px] border border-[#E8D8CC] bg-[#FFFCFA] px-4 h-12 text-sm font-semibold text-[#1F1F1F] outline-none transition focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70"
-          />
-          <button
-            type="submit"
-            className="flex h-12 items-center gap-2 rounded-[14px] bg-gradient-to-r from-[#F24A00] to-[#C94A00] px-6 text-sm font-extrabold text-white shadow-[0_14px_22px_rgba(201,74,0,0.22)] hover:shadow-lg transition-shadow"
-          >
-            <Plus className="h-5 w-5" />
-            <span>Agregar</span>
-          </button>
-        </form>
+        <button
+          onClick={() => setShowModal(true)}
+          className="mb-6 flex h-11 items-center justify-center gap-2 rounded-[14px] bg-gradient-to-r from-[#F24A00] to-[#C94A00] px-5 text-sm font-extrabold text-white shadow-[0_14px_22px_rgba(201,74,0,0.22)]"
+        >
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          Nuevo Plan
+        </button>
 
         <div className="overflow-hidden rounded-[16px] border border-[#EDE4DC]">
           <table className="w-full text-left text-sm">
@@ -118,6 +112,46 @@ export function PlansPage() {
           </table>
         </div>
       </div>
+
+      {showModal && (
+        <Modal open onClose={() => setShowModal(false)} className="relative my-auto flex w-full max-w-[400px] flex-col overflow-hidden rounded-[24px] bg-white shadow-[0_30px_90px_rgba(31,31,31,0.24)]">
+          <div className="flex shrink-0 items-center justify-between border-b border-[#E8D8CC] bg-[#FFFCFA] px-7 py-5">
+            <h2 className="text-lg font-extrabold text-[#1F1F1F]">Nuevo Plan</h2>
+            <button type="button" onClick={() => setShowModal(false)} className="grid h-8 w-8 place-items-center rounded-xl text-[#4B3024] hover:bg-[#FFF2E7]">
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </div>
+          <form onSubmit={handleAdd} className="p-7">
+            <label className="block">
+              <span className="mb-2 block text-xs font-extrabold uppercase tracking-[0.08em] text-[#8A7F78]">Nombre del plan</span>
+              <input
+                type="text"
+                value={newPlanName}
+                onChange={(e) => setNewPlanName(e.target.value)}
+                placeholder="Ej. 550 MBPS + WINTV"
+                className="w-full rounded-[14px] border border-[#E8D8CC] bg-[#FFFCFA] px-4 h-12 text-sm font-semibold text-[#1F1F1F] outline-none transition focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70"
+                autoFocus
+              />
+            </label>
+            <div className="mt-8 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="h-11 rounded-[13px] border border-[#E8D8CC] bg-white px-5 text-sm font-extrabold text-[#6B625C] hover:bg-[#FFF2E7]"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={!newPlanName.trim()}
+                className="h-11 rounded-[13px] bg-gradient-to-r from-[#F24A00] to-[#C94A00] px-5 text-sm font-extrabold text-white shadow-[0_12px_18px_rgba(201,74,0,0.18)] disabled:opacity-50"
+              >
+                Guardar
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

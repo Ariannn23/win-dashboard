@@ -23,10 +23,10 @@ export function canEditSale(user: Profile | null | undefined, sale: Sale) {
   if (user.rol === 'SUPERVISOR') {
     return (
       (sale.creado_por === user.id || sale.supervisor_id === user.id) &&
-      sale.estado === 'PENDIENTE_GRABACION'
+      (sale.estado === 'PENDIENTE_GRABACION' || sale.estado === 'RECHAZADO')
     );
   }
-  return user.rol === 'ASESOR' && sale.asesor_id === user.id && sale.estado === 'PENDIENTE_GRABACION';
+  return false;
 }
 
 export function canViewSale(user: Profile | null | undefined, sale: Sale) {

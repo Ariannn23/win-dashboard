@@ -43,10 +43,12 @@ function statusDescription(status: SaleStatus, currentStatus: SaleStatus) {
 function nextAllowedStatuses(currentStatus: SaleStatus): SaleStatus[] {
   if (FINAL_STATUSES.includes(currentStatus)) return [];
 
-  const currentIndex = STATUS_ORDER.indexOf(currentStatus);
-  const nextStep = currentIndex >= 0 ? STATUS_ORDER[currentIndex + 1] : undefined;
-  const statuses = [nextStep, 'RECHAZADO', 'CANCELADO'].filter(Boolean) as SaleStatus[];
-  return Array.from(new Set(statuses));
+  if (currentStatus === 'PENDIENTE_GRABACION') return ['GRABADO', 'RECHAZADO', 'CANCELADO'];
+  if (currentStatus === 'RECHAZADO') return ['PENDIENTE_GRABACION', 'CANCELADO'];
+  if (currentStatus === 'GRABADO') return ['PROGRAMADO_INSTALACION', 'CANCELADO'];
+  if (currentStatus === 'PROGRAMADO_INSTALACION') return ['INSTALADO', 'CANCELADO'];
+
+  return [];
 }
 
 function requiresFollowUpDate(status: SaleStatus) {
@@ -74,10 +76,7 @@ export function StatusChangeModal({ sale, onClose, onSubmit }: StatusChangeModal
   const [submitting, setSubmitting] = useState(false);
 
   const planPrice = planBasePriceLabel(sale.plan_contratar);
-  const currentFlowIndex = STATUS_ORDER.indexOf(sale.estado);
-  const targetFlowIndex = STATUS_ORDER.indexOf(status);
   const isCompleting = status === 'INSTALADO';
-  const isSkippingFlow = currentFlowIndex >= 0 && targetFlowIndex > currentFlowIndex + 1;
   const today = new Date().toISOString().slice(0, 10);
   const selectedRequiresDate = requiresFollowUpDate(status);
   const selectedRequiresComment = requiresComment(status);
@@ -213,11 +212,6 @@ export function StatusChangeModal({ sale, onClose, onSubmit }: StatusChangeModal
                   </div>
                   <FieldError message={errors.status} />
 
-                  {isSkippingFlow && (
-                    <div className="mt-3 rounded-[14px] border border-[#FFE1A8] bg-[#FFF8E6] px-4 py-3 text-sm font-semibold text-[#8A5B00]">
-                      Este cambio saltara pasos intermedios del flujo. Usa un comentario para dejar claro el motivo.
-                    </div>
-                  )}
                 </section>
 
                 <label className="block">
