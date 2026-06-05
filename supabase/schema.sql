@@ -26,6 +26,11 @@ create table public.perfiles (
 create table public.planes (
   id uuid primary key default gen_random_uuid(),
   nombre text not null unique,
+  tipo text not null default 'Residencial',
+  velocidad numeric not null default 100,
+  precio_mensual numeric not null default 89.90,
+  instalacion numeric not null default 50.00,
+  beneficios text[] not null default '{}',
   activo boolean not null default true,
   created_at timestamptz not null default now()
 );

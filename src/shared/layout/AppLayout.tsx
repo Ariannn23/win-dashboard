@@ -54,7 +54,7 @@ export function AppLayout() {
         { to: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
         { to: '/clientes', label: 'Clientes', icon: Users },
         { to: '/ventas', label: 'Ventas', icon: ShoppingCart },
-        { to: '/usuarios', label: 'Usuarios', icon: UserRound }
+        { to: '/planes', label: 'Planes', icon: Wifi }
       ];
     }
     

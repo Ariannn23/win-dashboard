@@ -28,10 +28,7 @@ export function SalesPage() {
   const [detailSale, setDetailSale] = useState<Sale | null>(null);
   const [historySale, setHistorySale] = useState<Sale | null>(null);
 
-  if (!user) return null;
-  if (isLoading) return <PageSkeleton cards={5} tableRows={7} tableColumns={8} />;
-
-  const baseSales = visibleSales(user);
+  const baseSales = useMemo(() => user ? visibleSales(user) : [], [user, visibleSales]);
   const filteredSales = useMemo(() => {
     const text = query.trim().toLowerCase();
     return baseSales.filter((sale) => {
@@ -45,6 +42,9 @@ export function SalesPage() {
       return matchesText && matchesStatus && matchesSupervisor && matchesAdvisor;
     });
   }, [advisor, baseSales, query, status, supervisor]);
+
+  if (!user) return null;
+  if (isLoading) return <PageSkeleton cards={5} tableRows={7} tableColumns={8} />;
 
   const completed = baseSales.filter((sale) => sale.estado === 'INSTALADO').length;
   const pending = baseSales.filter((sale) => sale.estado === 'PENDIENTE_GRABACION').length;

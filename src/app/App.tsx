@@ -49,7 +49,7 @@ const router = createBrowserRouter([
       { path: 'dashboard', element: <RoleRoute element={<DashboardPage />} blockedRoles={['ASESOR', 'BACK']} /> },
       { path: 'clientes', element: <RoleRoute element={<ClientsPage />} blockedRoles={['ASESOR', 'BACK']} /> },
       { path: 'ventas', element: <SalesPage /> },
-      { path: 'planes', element: <RoleRoute element={<PlansPage />} blockedRoles={['ASESOR', 'SUPERVISOR', 'BACK']} /> },
+      { path: 'planes', element: <RoleRoute element={<PlansPage />} blockedRoles={['ASESOR', 'BACK']} /> },
       { path: 'reportes', element: <RoleRoute element={<ReportsPage />} blockedRoles={['ASESOR', 'SUPERVISOR', 'BACK']} /> },
       { path: 'historial', element: <RoleRoute element={<HistoryPage />} blockedRoles={['ASESOR', 'SUPERVISOR', 'BACK']} /> },
       { path: 'usuarios', element: <RoleRoute element={<UsersPage />} blockedRoles={['ASESOR', 'BACK']} /> },

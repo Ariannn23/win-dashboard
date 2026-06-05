@@ -4,8 +4,16 @@ export interface Plan {
   id: string;
   nombre: string;
   activo: boolean;
+  tipo?: string;
+  velocidad?: number;
+  precio_mensual?: number;
+  instalacion?: number;
+  beneficios?: string[];
   created_at: string;
 }
+
+export type PlanInsert = Omit<Plan, 'id' | 'created_at' | 'activo'> & { activo?: boolean };
+export type PlanUpdate = Partial<PlanInsert> & { id: string };
 
 export const planService = {
   async getPlans(): Promise<Plan[]> {
@@ -19,11 +27,25 @@ export const planService = {
     return data as Plan[];
   },
 
-  async createPlan(nombre: string): Promise<Plan> {
+  async updatePlan(plan: PlanUpdate): Promise<Plan> {
+    if (!supabase) throw new Error('Supabase client not initialized');
+    const { id, ...updates } = plan;
+    const { data, error } = await supabase
+      .from('planes')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Plan;
+  },
+
+  async createPlan(plan: PlanInsert): Promise<Plan> {
     if (!supabase) throw new Error('Supabase client not initialized');
     const { data, error } = await supabase
       .from('planes')
-      .insert([{ nombre }])
+      .insert([plan])
       .select()
       .single();
 

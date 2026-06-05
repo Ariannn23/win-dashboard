@@ -1,157 +1,413 @@
-import { useState, useEffect } from 'react';
-import { planService, type Plan } from '@/services/crm/planService';
-import { Plus, X } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { planService, type Plan, type PlanInsert } from '@/services/crm/planService';
+import { useCrm } from '@/app/providers/CrmProvider';
+import {
+  CheckCircle2,
+  Edit3,
+  Plus,
+  Power,
+  Search,
+  ShieldCheck,
+  UsersRound,
+  Wifi,
+  X,
+} from 'lucide-react';
+import { formatMoney } from '@/shared/lib/format';
+import { ComboBox } from '@/shared/ui/FormControls';
 import { Modal } from '@/shared/ui/Modal';
+import { PageSkeleton } from '@/shared/ui/Skeleton';
 
 export function PlansPage() {
   const [planes, setPlanes] = useState<Plan[]>([]);
-  const [newPlanName, setNewPlanName] = useState('');
+  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState('TODOS');
   const [showModal, setShowModal] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { sales } = useCrm();
 
   useEffect(() => {
-    loadPlanes();
+    loadPlanes(true);
   }, []);
 
-  const loadPlanes = async () => {
+  async function loadPlanes(showLoading = false) {
+    if (showLoading) setIsLoading(true);
     try {
       const data = await planService.getPlans();
       setPlanes(data);
     } catch (error) {
       console.error(error);
+    } finally {
+      if (showLoading) setIsLoading(false);
+    }
+  }
+
+  const filteredPlans = useMemo(() => {
+    const text = query.trim().toLowerCase();
+    return planes.filter((plan) => {
+      const matchesText = !text || plan.nombre.toLowerCase().includes(text);
+      const matchesStatus =
+        status === 'TODOS' ||
+        (status === 'ACTIVO' && plan.activo) ||
+        (status === 'INACTIVO' && !plan.activo);
+      return matchesText && matchesStatus;
+    });
+  }, [planes, query, status]);
+
+  const activePlans = planes.filter((p) => p.activo).length;
+
+  const handleToggle = async (id: string, currentStatus: boolean) => {
+    // Optimistic UI update
+    setPlanes(current => current.map(p => p.id === id ? { ...p, activo: !currentStatus } : p));
+    try {
+      await planService.togglePlan(id, !currentStatus);
+      loadPlanes(false);
+    } catch (error) {
+      console.error(error);
+      // Revert if failed
+      setPlanes(current => current.map(p => p.id === id ? { ...p, activo: currentStatus } : p));
     }
   };
 
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newPlanName.trim()) return;
-    try {
-      await planService.createPlan(newPlanName.trim());
-      setNewPlanName('');
-      setShowModal(false);
-      loadPlanes();
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const handleToggle = async (id: string, activo: boolean) => {
-    try {
-      await planService.togglePlan(id, activo);
-      loadPlanes();
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  if (isLoading) return <PageSkeleton cards={4} tableRows={6} tableColumns={5} />;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <section className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
         <div>
-          <h1 className="text-[26px] font-extrabold tracking-[-0.025em] text-[#1F1F1F]">Planes y Promociones</h1>
+          <h1 className="text-[26px] font-extrabold tracking-[-0.025em] text-[#1F1F1F]">Planes</h1>
           <p className="mt-1.5 text-sm font-semibold text-[#6B625C]">
-            Gestiona los planes disponibles para ventas
+            Gestiona planes disponibles, precios y beneficios comerciales.
           </p>
         </div>
-      </div>
-
-      <div className="rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.045)]">
         <button
-          onClick={() => setShowModal(true)}
-          className="mb-6 flex h-11 items-center justify-center gap-2 rounded-[14px] bg-gradient-to-r from-[#F24A00] to-[#C94A00] px-5 text-sm font-extrabold text-white shadow-[0_14px_22px_rgba(201,74,0,0.22)]"
+          type="button"
+          onClick={() => {
+            setEditingPlan(null);
+            setShowModal(true);
+          }}
+          className="flex h-11 items-center justify-center gap-2 rounded-[14px] bg-gradient-to-r from-[#F24A00] to-[#C94A00] px-5 text-sm font-extrabold text-white shadow-[0_14px_22px_rgba(201,74,0,0.22)]"
         >
           <Plus className="h-4 w-4" aria-hidden="true" />
-          Nuevo Plan
+          Nuevo plan
         </button>
+      </section>
 
-        <div className="overflow-hidden rounded-[16px] border border-[#EDE4DC]">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-[#FAF7F3]">
-              <tr>
-                <th className="px-6 py-4 font-extrabold text-[#4B3024]">Nombre del Plan</th>
-                <th className="px-6 py-4 font-extrabold text-[#4B3024]">Estado</th>
-                <th className="px-6 py-4 font-extrabold text-[#4B3024] text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#EDE4DC]">
-              {planes.map((plan) => (
-                <tr key={plan.id} className="transition hover:bg-[#FFFDFC]">
-                  <td className="px-6 py-4 font-semibold text-[#1F1F1F]">{plan.nombre}</td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide ${
-                        plan.activo
-                          ? 'bg-[#DDF8E9] text-[#009A4E]'
-                          : 'bg-[#F3EAE3] text-[#6B625C]'
-                      }`}
-                    >
-                      {plan.activo ? 'Activo' : 'Deshabilitado'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => handleToggle(plan.id, !plan.activo)}
-                      className={`rounded-xl px-4 py-2 text-xs font-extrabold transition ${
-                        plan.activo
-                          ? 'border border-[#E8D8CC] bg-[#F7F1EC] text-[#A99B91] hover:bg-[#F3EAE3]'
-                          : 'border border-[#F24A00] bg-white text-[#C94A00] hover:bg-[#FFF2E7]'
-                      }`}
-                    >
-                      {plan.activo ? 'Deshabilitar' : 'Habilitar'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {planes.length === 0 && (
-                <tr>
-                  <td colSpan={3} className="px-6 py-8 text-center font-semibold text-[#8A7F78]">
-                    No hay planes registrados.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <PlanMetric icon={Wifi} label="Planes activos" value={activePlans} detail="Disponibles para venta" tone="orange" />
+        <PlanMetric icon={ShieldCheck} label="Plan mas vendido" value={planes[0]?.nombre || '-'} detail="-" tone="amber" />
+        <PlanMetric icon={CheckCircle2} label="Ingresos estimados" value="S/ 0" detail="Mensual proyectado" tone="green" />
+        <PlanMetric icon={UsersRound} label="Clientes activos" value="0" detail="Con plan habilitado" tone="blue" />
+      </section>
+
+      <section className="rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.045)]">
+        <div className="grid gap-4 lg:grid-cols-[1fr_220px_auto]">
+          <label className="relative block">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8A7F78]" aria-hidden="true" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar plan por nombre..."
+              className="h-12 w-full rounded-[14px] border border-[#E8D8CC] bg-[#FFFCFA] pl-11 pr-4 text-sm font-semibold text-[#1F1F1F] outline-none transition focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70"
+            />
+          </label>
+          <ComboBox
+            value={status}
+            onChange={(value) => setStatus(value)}
+            options={[
+              { value: 'TODOS', label: 'Todos los estados' },
+              { value: 'ACTIVO', label: 'Activos' },
+              { value: 'INACTIVO', label: 'Deshabilitados' },
+            ]}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setQuery('');
+              setStatus('TODOS');
+            }}
+            className="h-12 rounded-[14px] border border-[#E8D8CC] bg-white px-5 text-sm font-extrabold text-[#6B625C] hover:bg-[#FFF2E7]"
+          >
+            Limpiar
+          </button>
         </div>
-      </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+        {filteredPlans.map((plan) => {
+          const planClients = sales.filter(s => s.plan_contratar === plan.nombre && s.estado === 'INSTALADO').length;
+          return (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              clients={planClients}
+              onEdit={() => {
+                setEditingPlan(plan);
+                setShowModal(true);
+              }}
+              onToggle={() => handleToggle(plan.id, plan.activo)}
+            />
+          );
+        })}
+      </section>
 
       {showModal && (
-        <Modal open onClose={() => setShowModal(false)} className="relative my-auto flex w-full max-w-[400px] flex-col overflow-hidden rounded-[24px] bg-white shadow-[0_30px_90px_rgba(31,31,31,0.24)]">
-          <div className="flex shrink-0 items-center justify-between border-b border-[#E8D8CC] bg-[#FFFCFA] px-7 py-5">
-            <h2 className="text-lg font-extrabold text-[#1F1F1F]">Nuevo Plan</h2>
-            <button type="button" onClick={() => setShowModal(false)} className="grid h-8 w-8 place-items-center rounded-xl text-[#4B3024] hover:bg-[#FFF2E7]">
-              <X className="h-5 w-5" aria-hidden="true" />
-            </button>
-          </div>
-          <form onSubmit={handleAdd} className="p-7">
-            <label className="block">
-              <span className="mb-2 block text-xs font-extrabold uppercase tracking-[0.08em] text-[#8A7F78]">Nombre del plan</span>
-              <input
-                type="text"
-                value={newPlanName}
-                onChange={(e) => setNewPlanName(e.target.value)}
-                placeholder="Ej. 550 MBPS + WINTV"
-                className="w-full rounded-[14px] border border-[#E8D8CC] bg-[#FFFCFA] px-4 h-12 text-sm font-semibold text-[#1F1F1F] outline-none transition focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70"
-                autoFocus
-              />
-            </label>
-            <div className="mt-8 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="h-11 rounded-[13px] border border-[#E8D8CC] bg-white px-5 text-sm font-extrabold text-[#6B625C] hover:bg-[#FFF2E7]"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={!newPlanName.trim()}
-                className="h-11 rounded-[13px] bg-gradient-to-r from-[#F24A00] to-[#C94A00] px-5 text-sm font-extrabold text-white shadow-[0_12px_18px_rgba(201,74,0,0.18)] disabled:opacity-50"
-              >
-                Guardar
-              </button>
-            </div>
-          </form>
-        </Modal>
+        <PlanFormModal
+          plan={editingPlan}
+          onClose={() => {
+            setShowModal(false);
+            setEditingPlan(null);
+          }}
+          onSubmit={async (values) => {
+            if (editingPlan) {
+              await planService.updatePlan({ id: editingPlan.id, ...values });
+            } else {
+              await planService.createPlan(values);
+            }
+            setShowModal(false);
+            setEditingPlan(null);
+            loadPlanes(false);
+          }}
+        />
       )}
     </div>
+  );
+}
+
+function PlanMetric({ icon: Icon, label, value, detail, tone }: { icon: typeof Wifi; label: string; value: number | string; detail: string; tone: 'orange' | 'amber' | 'green' | 'blue' }) {
+  const tones = {
+    orange: 'bg-[#FFE2CC] text-[#C94A00]',
+    amber: 'bg-[#FFF2E7] text-[#D63B00]',
+    green: 'bg-[#DDF8E9] text-[#009A4E]',
+    blue: 'bg-[#EAF3FF] text-[#005DE8]',
+  };
+  return (
+    <article className="flex h-[112px] items-center gap-4 rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.045)]">
+      <div className={`grid h-12 w-12 place-items-center rounded-full ${tones[tone]}`}>
+        <Icon className="h-6 w-6" aria-hidden="true" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-[#6B625C]">{label}</p>
+        <p className="mt-1 truncate text-2xl font-extrabold tracking-[-0.025em] text-[#1F1F1F]">{value}</p>
+        <p className="mt-1 text-xs font-extrabold text-[#009A4E]">{detail}</p>
+      </div>
+    </article>
+  );
+}
+
+function PlanCard({ plan, clients, onEdit, onToggle }: { plan: Plan; clients: number; onEdit: () => void; onToggle: () => void }) {
+  const speed = plan.velocidad || plan.nombre.match(/(\d+)/)?.[1] || '0';
+  const tipo = plan.tipo || 'Residencial';
+  const isResidencial = tipo === 'Residencial';
+  
+  return (
+    <article className="rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.045)] flex flex-col h-full justify-between">
+      <div>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className={`grid h-14 w-14 place-items-center rounded-[18px] ${isResidencial ? 'bg-[#FFF2E7] text-[#F24A00]' : 'bg-[#F1E8FF] text-[#6B35C9]'}`}>
+              <Wifi className="h-7 w-7" aria-hidden="true" />
+            </div>
+            <div>
+              <h2 className="text-lg font-extrabold text-[#1F1F1F]">{plan.nombre}</h2>
+              <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-[11px] font-extrabold ${isResidencial ? 'bg-[#EAF3FF] text-[#005DE8]' : 'bg-[#F1E8FF] text-[#6B35C9]'}`}>
+                {tipo}
+              </span>
+            </div>
+          </div>
+          <span className={`rounded-full px-3 py-1 text-xs font-extrabold ${plan.activo ? 'bg-[#DDF8E9] text-[#009A4E]' : 'bg-[#F3EAE3] text-[#6B625C]'}`}>
+            {plan.activo ? 'Activo' : 'Deshabilitado'}
+          </span>
+        </div>
+
+        <div className="mt-5 text-center">
+          <p className={`text-2xl font-extrabold tracking-[-0.025em] ${isResidencial ? 'text-[#F24A00]' : 'text-[#6B35C9]'}`}>
+            {speed} Mbps
+          </p>
+        </div>
+
+        <div className="mt-5 grid grid-cols-3 divide-x divide-[#EDE4DC] border-y border-[#EDE4DC] py-3">
+          <PlanFact label="Mensual" value={plan.precio_mensual ? formatMoney(plan.precio_mensual) : 'S/ 0.00'} />
+          <PlanFact label="Instalacion" value={plan.instalacion ? formatMoney(plan.instalacion) : 'S/ 0.00'} />
+          <PlanFact label="Clientes" value={String(clients)} />
+        </div>
+
+        {plan.beneficios && plan.beneficios.length > 0 && (
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {plan.beneficios.map((feature, i) => (
+              <span key={i} className="flex items-center gap-2 text-sm font-semibold text-[#4B3024]">
+                <CheckCircle2 className={`h-4 w-4 shrink-0 ${isResidencial ? 'text-[#F24A00]' : 'text-[#6B35C9]'}`} aria-hidden="true" />
+                {feature}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={onEdit}
+          className={`flex h-11 items-center justify-center gap-2 rounded-[13px] border bg-white text-sm font-extrabold hover:bg-[#FFF2E7] ${isResidencial ? 'border-[#F24A00] text-[#C94A00]' : 'border-[#6B35C9] text-[#6B35C9]'}`}
+        >
+          <Edit3 className="h-4 w-4" aria-hidden="true" />
+          Editar
+        </button>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex h-11 items-center justify-center gap-2 rounded-[13px] border border-[#E8D8CC] bg-white text-sm font-extrabold text-[#4B3024] hover:bg-[#FFF2E7]"
+        >
+          <Power className="h-4 w-4" aria-hidden="true" />
+          {plan.activo ? 'Deshabilitar' : 'Habilitar'}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function PlanFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="px-3">
+      <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#8A7F78]">{label}</p>
+      <p className="mt-1 text-sm font-extrabold text-[#1F1F1F]">{value}</p>
+    </div>
+  );
+}
+
+function PlanFormModal({
+  plan,
+  onClose,
+  onSubmit,
+}: {
+  plan: Plan | null;
+  onClose: () => void;
+  onSubmit: (values: PlanInsert) => void;
+}) {
+  const [nombre, setNombre] = useState(plan?.nombre || '');
+  const [tipo, setTipo] = useState(plan?.tipo || 'Residencial');
+  const [velocidad, setVelocidad] = useState(plan?.velocidad || 100);
+  const [precio, setPrecio] = useState(plan?.precio_mensual || 89.9);
+  const [instalacion, setInstalacion] = useState(plan?.instalacion || 50);
+  const [activo, setActivo] = useState(plan ? plan.activo : true);
+  const [beneficiosStr, setBeneficiosStr] = useState(plan?.beneficios?.join('\n') || 'Internet ilimitado\nRouter incluido\nInstalacion rapida');
+
+  return (
+    <Modal open onClose={onClose} className="relative my-auto flex max-h-[calc(100vh-3rem)] w-full max-w-[680px] flex-col overflow-hidden rounded-[24px] bg-white shadow-[0_30px_90px_rgba(31,31,31,0.24)]">
+      <div className="flex shrink-0 items-center justify-between border-b border-[#E8D8CC] bg-[#FFFCFA] px-7 py-5">
+        <h2 className="text-xl font-extrabold text-[#1F1F1F]">{plan ? 'Editar plan' : 'Nuevo plan'}</h2>
+        <button type="button" onClick={onClose} title="Cerrar" className="grid h-9 w-9 place-items-center rounded-xl text-[#4B3024] hover:bg-[#FFF2E7]">
+          <X className="h-5 w-5" aria-hidden="true" />
+        </button>
+      </div>
+      <form
+        className="hidden-scrollbar flex-1 space-y-5 overflow-y-auto px-7 py-6"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit({
+            nombre,
+            tipo,
+            velocidad,
+            precio_mensual: precio,
+            instalacion,
+            activo,
+            beneficios: beneficiosStr.split('\n').map(b => b.trim()).filter(Boolean)
+          });
+        }}
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="block">
+            <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#4B3024]">Nombre del plan</span>
+            <input
+              required
+              autoFocus
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              className="mt-2 h-12 w-full rounded-[14px] border border-[#E8D8CC] bg-white px-4 text-sm font-semibold outline-none focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#4B3024]">Tipo</span>
+            <div className="mt-2">
+              <ComboBox
+                value={tipo}
+                onChange={(value) => setTipo(value)}
+                options={[
+                  { value: 'Residencial', label: 'Residencial' },
+                  { value: 'Empresarial', label: 'Empresarial' },
+                ]}
+              />
+            </div>
+          </label>
+          <label className="block">
+            <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#4B3024]">Velocidad Mbps</span>
+            <input
+              required
+              type="number"
+              min={1}
+              value={velocidad}
+              onChange={(e) => setVelocidad(Number(e.target.value))}
+              className="mt-2 h-12 w-full rounded-[14px] border border-[#E8D8CC] bg-white px-4 text-sm font-semibold outline-none focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#4B3024]">Precio mensual</span>
+            <input
+              required
+              type="number"
+              min={0}
+              step="0.1"
+              value={precio}
+              onChange={(e) => setPrecio(Number(e.target.value))}
+              className="mt-2 h-12 w-full rounded-[14px] border border-[#E8D8CC] bg-white px-4 text-sm font-semibold outline-none focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#4B3024]">Instalacion</span>
+            <input
+              required
+              type="number"
+              min={0}
+              step="0.1"
+              value={instalacion}
+              onChange={(e) => setInstalacion(Number(e.target.value))}
+              className="mt-2 h-12 w-full rounded-[14px] border border-[#E8D8CC] bg-white px-4 text-sm font-semibold outline-none focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#4B3024]">Estado</span>
+            <div className="mt-2">
+              <ComboBox
+                value={String(activo)}
+                onChange={(value) => setActivo(value === 'true')}
+                options={[
+                  { value: 'true', label: 'Activo' },
+                  { value: 'false', label: 'Deshabilitado' },
+                ]}
+              />
+            </div>
+          </label>
+        </div>
+
+        <label className="block">
+          <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#4B3024]">Beneficios del plan</span>
+          <textarea
+            value={beneficiosStr}
+            onChange={(e) => setBeneficiosStr(e.target.value)}
+            placeholder="Un beneficio por linea"
+            className="mt-2 min-h-[128px] w-full rounded-[14px] border border-[#E8D8CC] bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70"
+          />
+        </label>
+
+        <div className="flex justify-end gap-3 border-t border-[#E8D8CC] pt-5">
+          <button type="button" onClick={onClose} className="h-11 min-w-[140px] rounded-[13px] border border-[#E8B9A3] bg-white px-5 text-sm font-extrabold text-[#1F1F1F] hover:bg-[#FFF2E7]">
+            Cancelar
+          </button>
+          <button type="submit" disabled={!nombre.trim()} className="h-11 min-w-[160px] rounded-[13px] bg-gradient-to-r from-[#F24A00] to-[#C94A00] px-5 text-sm font-extrabold text-white shadow-[0_12px_18px_rgba(201,74,0,0.18)] disabled:opacity-50">
+            Guardar plan
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

@@ -62,19 +62,7 @@ export function ClientsPage() {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [page, setPage] = useState(1);
 
-  if (!user) return null;
-  if (isLoading) return <PageSkeleton cards={4} tableRows={6} tableColumns={8} />;
-
-  const clients = visibleSales(user);
-  const plans = Array.from(new Set(clients.map((sale) => sale.plan_contratar)));
-  const active = clients.filter((sale) => clientStatus(sale.estado) === 'ACTIVO').length;
-  const suspended = clients.filter((sale) => clientStatus(sale.estado) === 'SUSPENDIDO').length;
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  const newThisMonth = clients.filter((sale) => {
-    const created = new Date(sale.created_at);
-    return created.getMonth() === currentMonth && created.getFullYear() === currentYear;
-  }).length;
+  const clients = useMemo(() => user ? visibleSales(user) : [], [user, visibleSales]);
 
   const filteredClients = useMemo(() => {
     const text = query.trim().toLowerCase();
@@ -100,6 +88,19 @@ export function ClientsPage() {
   useEffect(() => {
     setPage(1);
   }, [plan, query, status, type]);
+
+  if (!user) return null;
+  if (isLoading) return <PageSkeleton cards={4} tableRows={6} tableColumns={8} />;
+
+  const plans = Array.from(new Set(clients.map((sale) => sale.plan_contratar)));
+  const active = clients.filter((sale) => clientStatus(sale.estado) === 'ACTIVO').length;
+  const suspended = clients.filter((sale) => clientStatus(sale.estado) === 'SUSPENDIDO').length;
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const newThisMonth = clients.filter((sale) => {
+    const created = new Date(sale.created_at);
+    return created.getMonth() === currentMonth && created.getFullYear() === currentYear;
+  }).length;
 
   const clearFilters = () => {
     setQuery('');
