@@ -169,7 +169,7 @@ export function AppLayout() {
         </div>
       </aside>
 
-      <div className={`transition-[padding] duration-300 ${collapsed ? 'lg:pl-[84px]' : 'lg:pl-[260px]'} print:pl-0 print:m-0`}>
+      <div className={`transition-[padding] duration-300 ${collapsed ? 'lg:pl-[84px]' : 'lg:pl-[260px]'} print:pl-0 print:m-0 pb-20 lg:pb-0`}>
         <header className="print:hidden sticky top-0 z-10 flex h-[72px] items-center justify-between border-b border-[#EDE4DC] bg-white/90 px-5 backdrop-blur lg:px-7">
           <div>
             <h2 className="text-xl font-extrabold tracking-[-0.02em] text-[#1F1F1F]">
@@ -190,6 +190,37 @@ export function AppLayout() {
           <Outlet context={{ sidebarCollapsed: collapsed }} />
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-[68px] items-center overflow-x-auto bg-white shadow-[0_-4px_24px_rgba(31,31,31,0.08)] lg:hidden print:hidden border-t border-[#EDE4DC] hide-scrollbar pb-safe">
+        <div className="flex h-full w-full min-w-max items-center justify-around px-2">
+          {items.filter(item => ['/dashboard', '/clientes', '/ventas', '/planes'].includes(item.to)).map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `flex h-full min-w-[72px] flex-col items-center justify-center gap-1.5 px-2 transition-colors ${
+                    isActive ? 'text-[#C94A00]' : 'text-[#6B625C] hover:text-[#4B3024]'
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <div className={`flex items-center justify-center rounded-full p-1 transition-colors ${isActive ? 'bg-[#FFF2E7]' : ''}`}>
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </div>
+                    <span className={`text-[10px] whitespace-nowrap ${isActive ? 'font-extrabold' : 'font-semibold'}`}>
+                      {item.label}
+                    </span>
+                  </>
+                )}
+              </NavLink>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

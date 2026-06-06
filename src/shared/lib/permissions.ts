@@ -22,7 +22,7 @@ export function canManageAsesores(user?: Profile | null) {
 }
 
 export function canCreateSales(user?: Profile | null) {
-  return user?.rol === 'ADMIN' || user?.rol === 'SUPERVISOR';
+  return user?.rol === 'ADMIN' || user?.rol === 'SUPERVISOR' || user?.rol === 'ASESOR';
 }
 
 export function canExportData(user?: Profile | null) {

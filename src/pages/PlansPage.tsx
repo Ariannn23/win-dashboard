@@ -87,10 +87,10 @@ export function PlansPage() {
             setEditingPlan(null);
             setShowModal(true);
           }}
-          className="flex h-11 items-center justify-center gap-2 rounded-[14px] bg-gradient-to-r from-[#F24A00] to-[#C94A00] px-5 text-sm font-extrabold text-white shadow-[0_14px_22px_rgba(201,74,0,0.22)]"
+          className="fixed bottom-[84px] right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-[#F24A00] to-[#C94A00] text-white shadow-[0_14px_30px_rgba(201,74,0,0.4)] transition-transform hover:scale-105 active:scale-95 xl:static xl:h-11 xl:w-auto xl:rounded-[14px] xl:px-5 xl:shadow-[0_14px_22px_rgba(201,74,0,0.22)]"
         >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Nuevo plan
+          <Plus className="h-6 w-6 xl:mr-2 xl:h-4 xl:w-4" aria-hidden="true" />
+          <span className="hidden xl:inline">Nuevo plan</span>
         </button>
       </section>
 
