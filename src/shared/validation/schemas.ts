@@ -74,6 +74,7 @@ export const userSchema = z.object({
     .email('Correo de recuperacion invalido'),
   rol: z.enum(['ADMIN', 'BACK', 'SUPERVISOR', 'ASESOR']),
   activo: z.boolean().default(true),
+  supervisor_id: z.string().optional(),
   password: z
     .string()
     .optional()

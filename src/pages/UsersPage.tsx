@@ -255,6 +255,7 @@ export function UsersPage() {
       {showForm && (
         <UserFormModal
           profile={editing}
+          supervisores={profiles.filter(p => p.rol === 'SUPERVISOR')}
           onClose={() => setShowForm(false)}
           onSubmit={async (values) => {
             if (!editing && !values.password) {
@@ -270,7 +271,7 @@ export function UsersPage() {
               await upsertProfile({ 
                 ...values, 
                 id: editing?.id,
-                supervisor_id: user.rol === 'SUPERVISOR' ? user.id : editing?.supervisor_id
+                supervisor_id: user.rol === 'SUPERVISOR' ? user.id : values.supervisor_id || undefined
               });
               setShowForm(false);
               if (!editing) {

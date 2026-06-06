@@ -10,6 +10,7 @@ import type { Profile, Role } from "@/types";
 
 interface UserFormModalProps {
   profile?: Profile | null;
+  supervisores?: Profile[];
   onClose: () => void;
   onSubmit: (values: UserFormValues) => void | Promise<void>;
 }
@@ -25,11 +26,13 @@ function toFormValues(profile?: Profile | null): UserFormValues {
     celular: profile?.celular ?? "",
     rol: profile?.rol ?? "ASESOR",
     activo: profile?.activo ?? true,
+    supervisor_id: profile?.supervisor_id ?? "",
   };
 }
 
 export function UserFormModal({
   profile,
+  supervisores = [],
   onClose,
   onSubmit,
 }: UserFormModalProps) {
@@ -138,6 +141,18 @@ export function UserFormModal({
                   }
                 />
               </Field>
+              {selectedRole === "ASESOR" && ['ADMIN', 'BACK'].includes(user?.rol || '') && (
+                <Field label="Supervisor">
+                  <ComboBox
+                    value={watch("supervisor_id") || ""}
+                    onChange={(value) => setValue("supervisor_id", value)}
+                    options={[
+                      { value: "", label: "Sin asignar" },
+                      ...supervisores.map(s => ({ value: s.id, label: s.nombres }))
+                    ]}
+                  />
+                </Field>
+              )}
               <Field label="Estado *">
                 <ComboBox
                   value={String(selectedActive)}
