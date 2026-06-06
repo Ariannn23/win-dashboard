@@ -66,7 +66,7 @@ export function SalesPage() {
       return [
         idVenta,
         sale.nombres_cliente,
-        sale.tipo_servicio,
+        'Internet',
         sale.plan_contratar,
         supervisor,
         asesor,

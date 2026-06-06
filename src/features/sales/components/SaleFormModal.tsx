@@ -46,6 +46,7 @@ const blankValues: SaleFormValues = {
   celular_referencia: '',
   titular_linea: '',
   direccion: '',
+  referencia: '',
   coordenadas: '',
   tipo_vivienda: 'Casa',
   distrito: '',
@@ -130,8 +131,8 @@ export function SaleFormModal({ sale, profiles, currentUser, onClose, onSubmit }
   
   const selectedPlanDetails = planes.find(p => p.nombre === selectedPlan);
   const planPrice = selectedPlanDetails 
-    ? `S/ ${selectedPlanDetails.precio_mensual.toFixed(2)}`
-    : `S/ 0.00 / mes`;
+    ? `S/ ${(selectedPlanDetails.precio_mensual || 0).toFixed(2)}`
+    : `S/ 0.00`;
 
   const inputClass =
     'h-12 w-full rounded-[14px] border border-[#E8D8CC] bg-white px-4 text-sm font-semibold text-[#1F1F1F] outline-none transition focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70';

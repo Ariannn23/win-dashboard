@@ -8,7 +8,7 @@ export const crmDataService: CrmDataService = isSupabaseConfigured ? supabaseCrm
 export type {
   CrmDataService,
   CrmSnapshot,
-  ProfileUpsertPayload,
   SaleUpsertPayload,
   StatusChangeResult,
 } from './types';
+export type { ProfileUpsertPayload } from '@/types';

@@ -5,10 +5,10 @@ import type { Profile, Sale, SaleStatus, StatusHistory } from '@/types';
 import type {
   CrmDataService,
   CrmSnapshot,
-  ProfileUpsertPayload,
   SaleUpsertPayload,
   StatusChangeResult,
 } from './types';
+import type { ProfileUpsertPayload } from '@/types';
 
 const SALES_KEY = 'win-crm-sales';
 const PROFILES_KEY = 'win-crm-profiles';
@@ -89,12 +89,13 @@ export const localCrmService: CrmDataService = {
     comentario: string,
     snapshot: CrmSnapshot,
   ): Promise<StatusChangeResult> {
-    if (!canChangeStatus(user)) {
+    const target = snapshot.sales.find((sale) => sale.id === saleId);
+    if (!target) throw new Error('Venta no encontrada');
+
+    if (!canChangeStatus(user, target)) {
       throw new Error('No tienes permiso para cambiar estados');
     }
 
-    const target = snapshot.sales.find((sale) => sale.id === saleId);
-    if (!target) throw new Error('Venta no encontrada');
     assertNextStatus(target.estado, nextStatus);
 
     const now = new Date().toISOString();

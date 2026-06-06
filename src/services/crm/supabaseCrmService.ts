@@ -4,10 +4,10 @@ import type { Profile, Sale, StatusHistory } from '@/types';
 import type {
   CrmDataService,
   CrmSnapshot,
-  ProfileUpsertPayload,
   SaleUpsertPayload,
   StatusChangeResult,
 } from './types';
+import type { ProfileUpsertPayload } from '@/types';
 
 function requireSupabase() {
   if (!supabase) throw new Error('Supabase no esta configurado');
