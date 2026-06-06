@@ -51,11 +51,11 @@ export const supabaseAuthService: AuthDataService = {
     });
 
     if (error) {
-      throw new Error(error.message === 'Invalid login credentials' ? 'Correo o contrasena incorrectos' : error.message);
+      throw new Error(error.message === 'Invalid login credentials' ? 'Correo o contraseña incorrectos' : error.message);
     }
 
     if (!data.user) {
-      throw new Error('No se pudo iniciar sesion');
+      throw new Error('No se pudo iniciar sesión');
     }
 
     const profile = await getActiveProfile(data.user.id);

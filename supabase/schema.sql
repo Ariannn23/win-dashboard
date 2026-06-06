@@ -20,6 +20,7 @@ create table public.perfiles (
   correo_recuperacion text not null default '',
   rol public.user_role not null default 'ASESOR',
   activo boolean not null default true,
+  supervisor_id uuid references public.perfiles(id),
   created_at timestamptz not null default now()
 );
 

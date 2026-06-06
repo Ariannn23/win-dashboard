@@ -11,17 +11,29 @@ interface HistoryPanelProps {
 }
 
 function statusTone(status: SaleStatus) {
-  if (status === 'INSTALADO') return 'bg-[#DDF8E9] text-[#2FA66A]';
-  if (status === 'RECHAZADO') return 'bg-[#FFE8E8] text-[#D64545]';
-  if (status === 'CANCELADO') return 'bg-[#F3EAE3] text-[#6B625C]';
-  return 'bg-[#FFE2CC] text-[#A83B00]';
+  const styles: Record<SaleStatus, string> = {
+    PENDIENTE_GRABACION: 'bg-[#FFF1C7] text-[#B46A00]',
+    PROGRAMADO_GRABACION: 'bg-[#EEF2FF] text-[#4338CA]',
+    GRABADO: 'bg-[#EAF3FF] text-[#2F80ED]',
+    PROGRAMADO_INSTALACION: 'bg-[#F4EBFF] text-[#7A3BCC]',
+    INSTALADO: 'bg-[#DDF8E9] text-[#2FA66A]',
+    RECHAZADO: 'bg-[#FFE8E8] text-[#D64545]',
+    CANCELADO: 'bg-[#F3EAE3] text-[#6B625C]',
+  };
+  return styles[status] || 'bg-[#FFE2CC] text-[#A83B00]';
 }
 
 function statusDotTone(status: SaleStatus) {
-  if (status === 'INSTALADO') return 'bg-[#2FA66A]';
-  if (status === 'RECHAZADO') return 'bg-[#D64545]';
-  if (status === 'CANCELADO') return 'bg-[#8A7F78]';
-  return 'bg-[#C94A00]';
+  const styles: Record<SaleStatus, string> = {
+    PENDIENTE_GRABACION: 'bg-[#B46A00]',
+    PROGRAMADO_GRABACION: 'bg-[#4338CA]',
+    GRABADO: 'bg-[#2F80ED]',
+    PROGRAMADO_INSTALACION: 'bg-[#7A3BCC]',
+    INSTALADO: 'bg-[#2FA66A]',
+    RECHAZADO: 'bg-[#D64545]',
+    CANCELADO: 'bg-[#6B625C]',
+  };
+  return styles[status] || 'bg-[#C94A00]';
 }
 
 export function HistoryPanel({ sale, history, onClose }: HistoryPanelProps) {
@@ -98,13 +110,13 @@ export function HistoryPanel({ sale, history, onClose }: HistoryPanelProps) {
                   <article className="rounded-[18px] border border-[#EDE4DC] bg-white p-5">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
-                        className={`rounded-full px-3 py-1 text-xs font-extrabold ${statusTone(item.estado_anterior)}`}
+                        className={`rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide whitespace-nowrap ${statusTone(item.estado_anterior)}`}
                       >
                         {STATUS_LABELS[item.estado_anterior]}
                       </span>
                       <ArrowRight className="h-4 w-4 text-[#8A7F78]" aria-hidden="true" />
                       <span
-                        className={`rounded-full px-3 py-1 text-xs font-extrabold ${statusTone(item.estado_nuevo)}`}
+                        className={`rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide whitespace-nowrap ${statusTone(item.estado_nuevo)}`}
                       >
                         {STATUS_LABELS[item.estado_nuevo]}
                       </span>

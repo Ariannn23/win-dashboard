@@ -10,12 +10,28 @@ export type SaleUpsertPayload =
   Omit<Sale, 'id' | 'created_at' | 'updated_at' | 'estado' | 'creado_por'> &
     Partial<Pick<Sale, 'id' | 'estado' | 'creado_por'>>;
 
+export interface Profile {
+  id: string;
+  nombres: string;
+  correo: string;
+  correo_recuperacion: string;
+  direccion: string;
+  fecha_nacimiento: string;
+  celular: string;
+  rol: Role;
+  activo: boolean;
+  created_at: string;
+}
+
 export interface ProfileUpsertPayload {
   id?: string;
   nombres: string;
   dni?: string;
   correo: string;
   correo_recuperacion: string;
+  direccion: string;
+  fecha_nacimiento: string;
+  celular: string;
   rol: Role;
   activo: boolean;
   password?: string;

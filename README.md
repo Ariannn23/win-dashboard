@@ -22,7 +22,7 @@ El consumo de datos esta separado en `src/services/crm`. Si Supabase esta config
 | SUPERVISOR | supervisor@win.pe |
 | ASESOR | asesor@win.pe |
 
-En modo demo cualquier contrasena es aceptada.
+En modo demo cualquier contraseña es aceptada.
 
 ## Base de datos
 
@@ -34,7 +34,7 @@ Para cargar datos de prueba completos, ejecuta despues:
 supabase/seed.sql
 ```
 
-La seed crea usuarios demo en Supabase Auth, perfiles, ventas con distintos estados, meses y asesores, ademas de eventos de auditoria. La contrasena demo para los usuarios sembrados es `password123`.
+La seed crea usuarios demo en Supabase Auth, perfiles, ventas con distintos estados, meses y asesores, ademas de eventos de auditoria. La contraseña demo para los usuarios sembrados es `password123`.
 
 ## Prisma
 

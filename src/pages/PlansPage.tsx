@@ -288,9 +288,9 @@ function PlanFormModal({
 }) {
   const [nombre, setNombre] = useState(plan?.nombre || '');
   const [tipo, setTipo] = useState(plan?.tipo || 'Residencial');
-  const [velocidad, setVelocidad] = useState(plan?.velocidad || 100);
-  const [precio, setPrecio] = useState(plan?.precio_mensual || 89.9);
-  const [instalacion, setInstalacion] = useState(plan?.instalacion || 50);
+  const [velocidad, setVelocidad] = useState<number | string>(plan?.velocidad || 100);
+  const [precio, setPrecio] = useState<number | string>(plan?.precio_mensual || 89.9);
+  const [instalacion, setInstalacion] = useState<number | string>(plan?.instalacion || 50);
   const [activo, setActivo] = useState(plan ? plan.activo : true);
   const [beneficiosStr, setBeneficiosStr] = useState(plan?.beneficios?.join('\n') || 'Internet ilimitado\nRouter incluido\nInstalacion rapida');
 
@@ -309,9 +309,9 @@ function PlanFormModal({
           onSubmit({
             nombre,
             tipo,
-            velocidad,
-            precio_mensual: precio,
-            instalacion,
+            velocidad: Number(velocidad),
+            precio_mensual: Number(precio),
+            instalacion: Number(instalacion),
             activo,
             beneficios: beneficiosStr.split('\n').map(b => b.trim()).filter(Boolean)
           });
@@ -345,10 +345,10 @@ function PlanFormModal({
             <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#4B3024]">Velocidad Mbps</span>
             <input
               required
-              type="number"
-              min={1}
+              type="text"
+              inputMode="numeric"
               value={velocidad}
-              onChange={(e) => setVelocidad(Number(e.target.value))}
+              onChange={(e) => setVelocidad(e.target.value.replace(/[^0-9]/g, ''))}
               className="mt-2 h-12 w-full rounded-[14px] border border-[#E8D8CC] bg-white px-4 text-sm font-semibold outline-none focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70"
             />
           </label>
@@ -356,11 +356,13 @@ function PlanFormModal({
             <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#4B3024]">Precio mensual</span>
             <input
               required
-              type="number"
-              min={0}
-              step="0.1"
+              type="text"
+              inputMode="decimal"
               value={precio}
-              onChange={(e) => setPrecio(Number(e.target.value))}
+              onChange={(e) => {
+                const val = e.target.value.replace(/,/g, '.').replace(/[^0-9.]/g, '');
+                if (val.split('.').length <= 2) setPrecio(val);
+              }}
               className="mt-2 h-12 w-full rounded-[14px] border border-[#E8D8CC] bg-white px-4 text-sm font-semibold outline-none focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70"
             />
           </label>
@@ -368,11 +370,13 @@ function PlanFormModal({
             <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#4B3024]">Instalacion</span>
             <input
               required
-              type="number"
-              min={0}
-              step="0.1"
+              type="text"
+              inputMode="decimal"
               value={instalacion}
-              onChange={(e) => setInstalacion(Number(e.target.value))}
+              onChange={(e) => {
+                const val = e.target.value.replace(/,/g, '.').replace(/[^0-9.]/g, '');
+                if (val.split('.').length <= 2) setInstalacion(val);
+              }}
               className="mt-2 h-12 w-full rounded-[14px] border border-[#E8D8CC] bg-white px-4 text-sm font-semibold outline-none focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70"
             />
           </label>

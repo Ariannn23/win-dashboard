@@ -17,6 +17,7 @@ import { useAuth } from '@/app/providers/AuthProvider';
 import { ROLE_LABELS } from '@/shared/lib/constants';
 import { initials } from '@/shared/lib/format';
 import { canManageUsers } from '@/shared/lib/permissions';
+import logoWin from '@/assets/icono.png';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
@@ -74,7 +75,7 @@ export function AppLayout() {
   return (
     <div className="min-h-screen bg-[#FAF7F3] text-[#1F1F1F]">
       <aside
-        className={`fixed inset-y-0 left-0 z-20 hidden flex-col border-r border-[#EDE4DC] bg-white transition-[width] duration-300 lg:flex ${
+        className={`print:hidden fixed inset-y-0 left-0 z-20 hidden flex-col border-r border-[#EDE4DC] bg-white transition-[width] duration-300 lg:flex ${
           collapsed ? 'w-[84px]' : 'w-[260px]'
         }`}
       >
@@ -89,12 +90,12 @@ export function AppLayout() {
           }}
         />
         <div className={`relative flex h-[72px] items-center gap-3 ${collapsed ? 'justify-center px-3' : 'px-5'}`}>
-          <div className="grid h-10 w-10 place-items-center rounded-[12px] bg-gradient-to-br from-[#F24A00] to-[#C94A00] text-white shadow-[0_10px_20px_rgba(201,74,0,0.22)]">
-            <Wifi className="h-6 w-6" aria-hidden="true" />
+          <div className="h-10 w-10 shrink-0">
+            <img src={logoWin} alt="Win Logo" className="h-full w-full object-contain" />
           </div>
           <div className={collapsed ? 'hidden' : 'block'}>
-            <p className="text-[23px] font-extrabold tracking-[-0.03em] text-[#C94A00]">WIN</p>
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#B39B8E]">Sales CRM</p>
+            <p className="text-[20px] font-extrabold tracking-[-0.03em] text-[#C94A00]">WIN</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#B39B8E] mt-[-2px]">Sales CRM</p>
           </div>
           <button
             type="button"
@@ -155,16 +156,21 @@ export function AppLayout() {
             className={`flex h-12 w-full items-center justify-center gap-3 rounded-[15px] border border-[#E8D8CC] text-sm font-extrabold text-[#C94A00] transition hover:bg-[#FFF2E7] ${
               collapsed ? 'px-0' : 'px-4'
             }`}
-            title="Cerrar sesion"
+            title="Cerrar sesión"
           >
             <LogOut className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
-            <span className={collapsed ? 'hidden' : 'block'}>Cerrar Sesion</span>
+            <span className={collapsed ? 'hidden' : 'block'}>Cerrar Sesión</span>
           </button>
+          <div className={`mt-4 text-center transition-opacity duration-300 ${collapsed ? 'hidden' : 'block'}`}>
+            <p className="text-[11px] font-normal text-[#BDB5AC]">
+              © 2026 Desarrollado por SharkCorp
+            </p>
+          </div>
         </div>
       </aside>
 
-      <div className={`transition-[padding] duration-300 ${collapsed ? 'lg:pl-[84px]' : 'lg:pl-[260px]'}`}>
-        <header className="sticky top-0 z-10 flex h-[72px] items-center justify-between border-b border-[#EDE4DC] bg-white/90 px-5 backdrop-blur lg:px-7">
+      <div className={`transition-[padding] duration-300 ${collapsed ? 'lg:pl-[84px]' : 'lg:pl-[260px]'} print:pl-0 print:m-0`}>
+        <header className="print:hidden sticky top-0 z-10 flex h-[72px] items-center justify-between border-b border-[#EDE4DC] bg-white/90 px-5 backdrop-blur lg:px-7">
           <div>
             <h2 className="text-xl font-extrabold tracking-[-0.02em] text-[#1F1F1F]">
               Hola, <span className="text-[#C94A00]">{user.nombres.split(' ')[0]}</span> 👋

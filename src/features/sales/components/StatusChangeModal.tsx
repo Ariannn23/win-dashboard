@@ -1,16 +1,17 @@
 import { AlertCircle, Calendar, CheckCircle2, Info, Wifi, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { FINAL_STATUSES, STATUS_LABELS, STATUS_ORDER } from '@/shared/lib/constants';
 import { initials } from '@/shared/lib/format';
 import { planBasePriceLabel } from '@/shared/lib/sales';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { DateControl, FieldError } from '@/shared/ui/FormControls';
 import { Modal } from '@/shared/ui/Modal';
-import type { Role, Sale, SaleHistory, SaleStatus } from '@/types';
+import { supabase } from '@/services/supabase/client';
+import type { Role, Sale, StatusHistory, SaleStatus } from '@/types';
 
 interface StatusChangeModalProps {
   sale: Sale;
-  history?: SaleHistory[];
+  history?: StatusHistory[];
   onClose: () => void;
   onSubmit: (nextStatus: SaleStatus, comment: string) => void | Promise<void>;
 }
@@ -74,7 +75,20 @@ export function StatusChangeModal({ sale, history = [], onClose, onSubmit }: Sta
   const [errors, setErrors] = useState<StatusChangeErrors>({});
   const [submitting, setSubmitting] = useState(false);
 
-  const planPrice = planBasePriceLabel(sale.plan_contratar);
+  const [planPrice, setPlanPrice] = useState('S/ 0.00');
+
+  useEffect(() => {
+    supabase
+      ?.from('planes')
+      .select('precio_mensual')
+      .eq('nombre', sale.plan_contratar)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setPlanPrice(`S/ ${data.precio_mensual.toFixed(2)}`);
+        }
+      });
+  }, [sale.plan_contratar]);
   const isCompleting = status === 'INSTALADO';
   const today = new Date().toISOString().slice(0, 10);
   const selectedRequiresComment = requiresComment(status);
@@ -227,7 +241,7 @@ export function StatusChangeModal({ sale, history = [], onClose, onSubmit }: Sta
                         <div key={item.id} className="flex items-start gap-3 text-sm">
                           <div className="mt-1 h-2 w-2 rounded-full bg-[#FF7A1A]" />
                           <div>
-                            <p className="font-semibold text-[#1F1F1F]">{item.accion}</p>
+                            <p className="font-semibold text-[#1F1F1F]">{'Cambio a ' + STATUS_LABELS[item.estado_nuevo]}</p>
                             {item.comentario && <p className="mt-0.5 text-[#6B625C]">{item.comentario}</p>}
                             <p className="mt-1 text-xs text-[#8A7F78]">{new Date(item.created_at).toLocaleString('es-PE')}</p>
                           </div>
@@ -250,7 +264,7 @@ export function StatusChangeModal({ sale, history = [], onClose, onSubmit }: Sta
                         <div key={item.id} className="flex items-start gap-3 text-sm">
                           <div className="mt-1 h-2 w-2 rounded-full bg-[#FF7A1A]" />
                           <div>
-                            <p className="font-semibold text-[#1F1F1F]">{item.accion}</p>
+                            <p className="font-semibold text-[#1F1F1F]">{'Cambio a ' + STATUS_LABELS[item.estado_nuevo]}</p>
                             {item.comentario && <p className="mt-0.5 text-[#6B625C]">{item.comentario}</p>}
                             <p className="mt-1 text-xs text-[#8A7F78]">{new Date(item.created_at).toLocaleString('es-PE')}</p>
                           </div>

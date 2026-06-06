@@ -98,25 +98,25 @@ export function DashboardPage() {
   const monthlyAmount = sales.reduce((acc, sale) => acc + saleAmount(sale), 0);
 
   const recentSales = sales.slice(0, 3);
-  const metricCards = [
+    const metricCards = [
     {
       icon: UsersRound,
       label: 'Clientes activos',
-      value: stats.total + advisors + supervisors,
-      trend: '+12.5%',
+      value: stats.total,
+      trend: stats.total > 0 ? '+12.5%' : undefined,
     },
     {
       icon: Gauge,
       label: 'MRR actual',
       value: `S/${monthlyAmount.toLocaleString('es-PE')}`,
-      trend: '+8.2%',
+      trend: monthlyAmount > 0 ? '+8.2%' : undefined,
     },
     {
       icon: TrendingUp,
       label: 'Capacidad de ventas',
-      value: '75%',
+      value: stats.total > 0 ? `${Math.round((stats.total / Math.max(stats.total * 2, 12)) * 100)}%` : '0%',
       detail: `/${Math.max(stats.total * 2, 12)} objetivos`,
-      progress: 75,
+      progress: stats.total > 0 ? Math.round((stats.total / Math.max(stats.total * 2, 12)) * 100) : 0,
     },
     {
       icon: ShoppingCart,
@@ -238,7 +238,7 @@ export function DashboardPage() {
             </button>
           </section>
 
-          <GoalCard />
+          <GoalCard sales={sales} />
         </aside>
       </section>
     </div>
@@ -415,10 +415,35 @@ function ObjectiveSummaryFooter({
   );
 }
 
-function GoalCard() {
+function GoalCard({ sales }: { sales: Sale[] }) {
+  const [goal, setGoal] = useState(() => Number(localStorage.getItem('dashboard_monthly_goal')) || 1500);
+  const [isEditing, setIsEditing] = useState(false);
+  const [inputValue, setInputValue] = useState(String(goal));
+
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const achieved = sales.filter(s => {
+    const d = new Date(s.created_at);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  }).length;
+
+  const progress = goal > 0 ? Math.min(Math.round((achieved / goal) * 100), 100) : 0;
+  const remaining = Math.max(goal - achieved, 0);
+
+  const handleSave = () => {
+    const newGoal = Number(inputValue);
+    if (!isNaN(newGoal) && newGoal > 0) {
+      setGoal(newGoal);
+      localStorage.setItem('dashboard_monthly_goal', String(newGoal));
+    } else {
+      setInputValue(String(goal));
+    }
+    setIsEditing(false);
+  };
+
   return (
     <section className="relative overflow-hidden rounded-[20px] bg-gradient-to-br from-[#F24A00] via-[#E04400] to-[#A83B00] p-6 text-white shadow-[0_16px_32px_rgba(201,74,0,0.24)]">
-      <svg className="absolute -right-8 -top-8 h-36 w-36 text-white/15" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+      <svg className="absolute -right-8 -top-8 h-36 w-36 text-white/15 pointer-events-none" viewBox="0 0 120 120" fill="none" aria-hidden="true">
         <circle cx="60" cy="60" r="44" stroke="currentColor" strokeWidth="14" />
         <circle cx="60" cy="60" r="18" stroke="currentColor" strokeWidth="10" />
         <path d="M60 17v20M60 83v20M17 60h20M83 60h20" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
@@ -426,21 +451,39 @@ function GoalCard() {
       <div className="relative">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-white/75">Meta trimestral</p>
-            <h2 className="mt-1 text-2xl font-extrabold tracking-[-0.03em]">1.5K ventas</h2>
+            <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-white/75">Meta Mensual</p>
+            {isEditing ? (
+              <input
+                autoFocus
+                type="number"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onBlur={handleSave}
+                onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+                className="mt-1 w-24 rounded bg-white/20 px-2 py-1 text-2xl font-extrabold tracking-[-0.03em] text-white outline-none ring-1 ring-white/50"
+              />
+            ) : (
+              <h2 
+                className="mt-1 cursor-pointer text-2xl font-extrabold tracking-[-0.03em] hover:text-white/90 transition-colors"
+                onClick={() => setIsEditing(true)}
+                title="Click para editar la meta"
+              >
+                {goal} ventas
+              </h2>
+            )}
           </div>
-          <span className="rounded-full bg-white/18 px-3 py-1 text-xs font-extrabold ring-1 ring-[#FFB48A]/60 shadow-[0_0_15px_rgba(255,180,138,0.35)]">84%</span>
+          <span className="rounded-full bg-white/18 px-3 py-1 text-xs font-extrabold ring-1 ring-[#FFB48A]/60 shadow-[0_0_15px_rgba(255,180,138,0.35)]">{progress}%</span>
         </div>
         <p className="mt-4 max-w-xs text-sm font-semibold leading-6 text-white/88">
-          Faltan 240 ventas para cerrar la meta. Mantener el ritmo actual deja el objetivo al alcance.
+          {remaining === 0 ? '¡Meta alcanzada! Gran trabajo del equipo.' : `Faltan ${remaining} ventas para cerrar la meta. Mantener el ritmo actual deja el objetivo al alcance.`}
         </p>
         <div className="mt-6 rounded-[16px] bg-white/14 p-3 ring-1 ring-[#FFB48A]/60 shadow-[0_0_15px_rgba(255,180,138,0.35)]">
           <div className="flex items-center justify-between text-xs font-extrabold text-white/90">
-            <span>1,260 logradas</span>
-            <span>1,500 objetivo</span>
+            <span>{achieved} logradas</span>
+            <span>{goal} objetivo</span>
           </div>
           <div className="mt-3 relative h-3 rounded-full bg-[#8A2D00]/45">
-            <div className="absolute left-0 top-0 h-full rounded-full bg-white" style={{ width: '84%' }}>
+            <div className="absolute left-0 top-0 h-full rounded-full bg-white transition-all duration-500" style={{ width: `${progress}%` }}>
               <span className="absolute right-0 top-1/2 h-5 w-5 -translate-y-1/2 translate-x-1/2 rounded-full border-[3px] border-white bg-[#FF7A1A] shadow-[0_4px_10px_rgba(0,0,0,0.3)]" />
             </div>
           </div>

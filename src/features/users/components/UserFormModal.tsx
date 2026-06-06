@@ -1,9 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Camera, Copy, UserRound, X } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { AlertCircle, Camera, Copy, UserRound, X } from "lucide-react";
+import { Controller, useForm } from "react-hook-form";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { ROLE_LABELS } from "@/shared/lib/constants";
-import { ComboBox, FieldError } from "@/shared/ui/FormControls";
+import { ComboBox, DateControl, FieldError } from "@/shared/ui/FormControls";
 import { Modal } from "@/shared/ui/Modal";
 import { userSchema, type UserFormValues } from "@/shared/validation/schemas";
 import type { Profile, Role } from "@/types";
@@ -20,6 +20,9 @@ function toFormValues(profile?: Profile | null): UserFormValues {
     dni: profile?.dni ?? "",
     correo: profile?.correo?.replace(/@win\.pe$/i, "") ?? "",
     correo_recuperacion: profile?.correo_recuperacion ?? "",
+    direccion: profile?.direccion ?? "",
+    fecha_nacimiento: profile?.fecha_nacimiento ?? "",
+    celular: profile?.celular ?? "",
     rol: profile?.rol ?? "ASESOR",
     activo: profile?.activo ?? true,
   };
@@ -36,6 +39,7 @@ export function UserFormModal({
     register,
     setValue,
     watch,
+    control,
     formState: { errors },
   } = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -149,6 +153,19 @@ export function UserFormModal({
                   ]}
                 />
               </Field>
+              <Field label="Celular *" error={errors.celular?.message}>
+                <input
+                  type="tel"
+                  {...register("celular", {
+                    onChange: (e) => {
+                      e.target.value = e.target.value.replace(/\D/g, "");
+                    }
+                  })}
+                  placeholder="987654321"
+                  className={inputClass}
+                  maxLength={9}
+                />
+              </Field>
             </div>
 
             <div className="flex min-w-0 flex-col gap-2">
@@ -175,32 +192,64 @@ export function UserFormModal({
                   className={inputClass}
                 />
               </Field>
-              <Field
-                label={
-                  profile ? "Contraseña (opcional para editar)" : "Contraseña *"
-                }
-                error={errors.password?.message}
-              >
-                <div className="flex h-12 overflow-hidden rounded-[14px] border border-[#E8D8CC] bg-white transition focus-within:border-[#FF7A1A] focus-within:ring-4 focus-within:ring-[#FFE2CC]/70">
-                  <input
-                    type="text"
-                    {...register("password")}
-                    placeholder="Min 8 caracteres, 1 letra, 1 num y 1 especial"
-                    className="min-w-0 flex-1 border-0 bg-transparent px-4 text-sm font-semibold text-[#1F1F1F] outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const pass = watch("password");
-                      if (pass) navigator.clipboard.writeText(pass);
-                    }}
-                    title="Copiar contraseña"
-                    className="grid place-items-center border-l border-[#E8D8CC] bg-[#FFF2E7] px-4 text-[#C94A00] hover:bg-[#FFE2CC]"
-                  >
-                    <Copy className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                </div>
+              <Field label="Dirección *" error={errors.direccion?.message}>
+                <input
+                  type="text"
+                  {...register("direccion")}
+                  placeholder="Ingresa la dirección"
+                  className={inputClass}
+                />
               </Field>
+              <Field label="Fecha de Nacimiento *" error={errors.fecha_nacimiento?.message}>
+                <input
+                  type="text"
+                  {...register("fecha_nacimiento", {
+                    onChange: (e) => {
+                      let val = e.target.value.replace(/\D/g, "");
+                      if (val.length > 2) val = val.slice(0, 2) + "/" + val.slice(2);
+                      if (val.length > 5) val = val.slice(0, 5) + "/" + val.slice(5);
+                      e.target.value = val;
+                    }
+                  })}
+                  placeholder="dd/mm/aaaa"
+                  maxLength={10}
+                  className={inputClass}
+                />
+              </Field>
+              
+              {profile ? (
+                <Field label="Contraseña *">
+                  <div className="flex h-12 items-center gap-2 rounded-[14px] border border-[#E8D8CC] bg-[#FFF2E7] px-4 text-xs italic text-[#8C2D00]">
+                    <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span>Para cambiar contraseña, contacta a Desarrollo</span>
+                  </div>
+                </Field>
+              ) : (
+                <Field
+                  label="Contraseña *"
+                  error={errors.password?.message}
+                >
+                  <div className="flex h-12 overflow-hidden rounded-[14px] border border-[#E8D8CC] bg-white transition focus-within:border-[#FF7A1A] focus-within:ring-4 focus-within:ring-[#FFE2CC]/70">
+                    <input
+                      type="text"
+                      {...register("password")}
+                      placeholder="Min 8 caracteres, 1 letra, 1 num y 1 especial"
+                      className="min-w-0 flex-1 border-0 bg-transparent px-4 text-sm font-semibold text-[#1F1F1F] outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const pass = watch("password");
+                        if (pass) navigator.clipboard.writeText(pass);
+                      }}
+                      title="Copiar contraseña"
+                      className="grid place-items-center border-l border-[#E8D8CC] bg-[#FFF2E7] px-4 text-[#C94A00] hover:bg-[#FFE2CC]"
+                    >
+                      <Copy className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                </Field>
+              )}
             </div>
           </div>
         </section>

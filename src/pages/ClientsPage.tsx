@@ -17,11 +17,13 @@ import {
   Wifi,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import * as XLSX from 'xlsx';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useCrm } from '@/app/providers/CrmProvider';
 import { STATUS_LABELS } from '@/shared/lib/constants';
+import { canExportData } from '@/shared/lib/permissions';
 import { formatMoney, formatShortDate, initials } from '@/shared/lib/format';
 import {
   CLIENT_STATUS_LABELS,
@@ -35,6 +37,7 @@ import {
 import { ComboBox, type SelectOption } from '@/shared/ui/FormControls';
 import { PAGE_SIZE, Pagination } from '@/shared/ui/Pagination';
 import { PageSkeleton } from '@/shared/ui/Skeleton';
+import { Modal } from '@/shared/ui/Modal';
 import { planService, type Plan } from '@/services/crm/planService';
 import type { Sale } from '@/types';
 
@@ -57,7 +60,19 @@ export function ClientsPage() {
   const [query, setQuery] = useState('');
   const [type, setType] = useState<ClientTypeFilter>('TODOS');
   const [plan, setPlan] = useState('TODOS');
-  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Sale | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setExportOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const [page, setPage] = useState(1);
   const [globalPlans, setGlobalPlans] = useState<Plan[]>([]);
 
@@ -89,7 +104,7 @@ export function ClientsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [plan, query, status, type]);
+  }, [plan, query, type]);
 
   if (!user) return null;
   if (isLoading) return <PageSkeleton cards={4} tableRows={6} tableColumns={8} />;
@@ -108,9 +123,29 @@ export function ClientsPage() {
     setPlan('TODOS');
   };
 
+  const exportToExcel = () => {
+    const headers = ['Cliente', 'DNI/RUC', 'Telefono', 'Correo', 'Tipo', 'Plan Actual', 'Estado', 'Registro'];
+    const rows = filteredClients.map((sale) => [
+      sale.nombres_cliente,
+      sale.numero_documento,
+      sale.celular_principal,
+      sale.correo_cliente,
+      clientType(sale) === 'EMPRESA' ? 'Empresa' : 'Hogar',
+      sale.plan_contratar,
+      CLIENT_STATUS_LABELS[clientStatus(sale.estado)],
+      new Date(sale.created_at).toLocaleDateString()
+    ]);
+    
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Clientes');
+    XLSX.writeFile(workbook, `clientes_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+
   return (
     <div className="space-y-6">
-      <section className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
+      <section className="print:hidden flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
         <div>
           <h1 className="text-[26px] font-extrabold tracking-[-0.025em] text-[#1F1F1F]">Clientes</h1>
           <p className="mt-1.5 text-sm font-semibold text-[#6B625C]">
@@ -119,13 +154,13 @@ export function ClientsPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        <ClientMetric icon={UsersRound} label="Total de clientes" value={clients.length} trend="12.5%" tone="orange" />
-        <ClientMetric icon={Plus} label="Nuevos este mes" value={newThisMonth} trend="8.7%" tone="blue" />
+      <section className="print:hidden grid gap-4 md:grid-cols-2">
+        <ClientMetric icon={UsersRound} label="Total de clientes" value={clients.length} trend={clients.length > 0 ? "12.5%" : undefined} tone="orange" />
+        <ClientMetric icon={Plus} label="Nuevos este mes" value={newThisMonth} trend={newThisMonth > 0 ? "8.7%" : undefined} tone="blue" />
       </section>
 
-      <section className="rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.045)]">
-        <div className="grid items-end gap-4 xl:grid-cols-[1.5fr_0.75fr_0.75fr_auto]">
+      <section className="print:hidden rounded-[20px] border border-[#EDE4DC] bg-white p-5 shadow-[0_14px_34px_rgba(91,47,20,0.045)]">
+        <div className="grid items-end gap-4 xl:grid-cols-[1.2fr_1fr_1fr_auto]">
           <label className="relative block">
             <span className="mb-2 block text-xs font-extrabold uppercase tracking-[0.08em] text-[#8A7F78]">Buscar cliente</span>
             <Search className="pointer-events-none absolute left-4 top-[41px] h-4 w-4 text-[#8A7F78]" aria-hidden="true" />
@@ -161,31 +196,58 @@ export function ClientsPage() {
               <Eraser className="h-4 w-4" aria-hidden="true" />
               Limpiar
             </button>
-            <button
-              type="button"
-              className="flex h-12 items-center gap-2 rounded-[14px] border border-[#E8D8CC] bg-white px-5 text-sm font-extrabold text-[#4B3024] hover:bg-[#FFF2E7]"
-            >
-              <Download className="h-4 w-4" aria-hidden="true" />
-              Exportar
-            </button>
+            {canExportData(user) && (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setExportOpen(!exportOpen)}
+                  className="flex h-12 items-center gap-2 rounded-[14px] border border-[#E8D8CC] bg-white px-5 text-sm font-extrabold text-[#4B3024] hover:bg-[#FFF2E7]"
+                >
+                  <Download className="h-4 w-4" aria-hidden="true" />
+                  Exportar
+                </button>
+                {exportOpen && (
+                  <div className="absolute right-0 top-14 z-20 w-40 overflow-hidden rounded-[14px] border border-[#E8D8CC] bg-white p-1.5 shadow-[0_18px_45px_rgba(91,47,20,0.14)]">
+                    <button
+                      onClick={() => {
+                        setExportOpen(false);
+                        exportToExcel();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-[#4B3024] hover:bg-[#FFF2E7]"
+                    >
+                      Exportar a Excel
+                    </button>
+                    <button
+                      onClick={() => {
+                        setExportOpen(false);
+                        window.print();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-[#4B3024] hover:bg-[#FFF2E7]"
+                    >
+                      Imprimir a PDF
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-[20px] border border-[#EDE4DC] bg-white shadow-[0_14px_34px_rgba(91,47,20,0.045)]">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1060px] text-sm">
+      <section className="overflow-hidden rounded-[20px] border border-[#EDE4DC] bg-white shadow-[0_14px_34px_rgba(91,47,20,0.045)] print:m-0 print:border-none print:shadow-none">
+        <div className="overflow-x-auto print:overflow-visible">
+          <table className="w-full min-w-[1060px] text-sm print:min-w-0 print:w-full print:table-fixed print:text-xs">
             <thead>
-              <tr className="border-b border-[#E0BDAA] bg-[#FFF2E7] text-left text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#4B3024]">
+              <tr className="border-b border-[#E0BDAA] bg-[#FFF2E7] text-left text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#4B3024] print:text-[9px]">
                 <th className="px-5 py-4">Cliente</th>
                 <th className="px-4 py-4">DNI / RUC</th>
                 <th className="px-4 py-4">Telefono</th>
                 <th className="px-4 py-4">Correo</th>
                 <th className="px-4 py-4">Tipo</th>
-                <th className="px-4 py-4">Plan actual</th>
+                <th className="px-4 py-4">Plan Actual</th>
                 <th className="px-4 py-4">Estado</th>
                 <th className="px-4 py-4">Registro</th>
-                <th className="px-5 py-4 text-right">Acciones</th>
+                <th className="print:hidden px-5 py-4 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EDE4DC]">
@@ -207,7 +269,7 @@ export function ClientsPage() {
                     </td>
                     <td className="px-4 py-4 font-semibold text-[#4B3024]">{sale.numero_documento}</td>
                     <td className="px-4 py-4 font-semibold text-[#4B3024]">{sale.celular_principal}</td>
-                    <td className="px-4 py-4 font-semibold text-[#4B3024]">{sale.correo_cliente}</td>
+                    <td className="px-4 py-4 font-semibold text-[#4B3024] print:break-all print:px-2">{sale.correo_cliente}</td>
                     <td className="px-4 py-4">
                       <span className={`rounded-full px-3 py-1 text-[11px] font-extrabold ${typeTone(saleType)}`}>
                         {saleType === 'HOGAR' ? 'Hogar' : 'Empresa'}
@@ -219,12 +281,12 @@ export function ClientsPage() {
                         {CLIENT_STATUS_LABELS[saleStatus]}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-4 font-semibold text-[#4B3024]">{formatShortDate(sale.created_at)}</td>
-                    <td className="px-5 py-4">
+                    <td className="whitespace-nowrap px-4 py-4 font-semibold text-[#4B3024] print:px-2">{formatShortDate(sale.created_at)}</td>
+                    <td className="print:hidden px-5 py-4">
                       <div className="flex justify-end gap-1">
                         <button
                           type="button"
-                          onClick={() => setSelectedSale(sale)}
+                          onClick={() => setSelectedClient(sale)}
                           title="Ver cliente"
                           className="grid h-8 w-8 place-items-center rounded-xl text-[#6B625C] hover:bg-[#FFF2E7] hover:text-[#C94A00]"
                         >
@@ -239,10 +301,12 @@ export function ClientsPage() {
           </table>
         </div>
 
-        <Pagination page={currentPage} totalItems={filteredClients.length} itemLabel="clientes" onPageChange={setPage} />
+        <section className="print:hidden p-4">
+          <Pagination page={currentPage} totalItems={filteredClients.length} itemLabel="clientes" onPageChange={setPage} />
+        </section>
       </section>
 
-      {selectedSale && <ClientDetailPanel sale={selectedSale} onClose={() => setSelectedSale(null)} />}
+      {selectedClient && <ClientDetailPanel sale={selectedClient} onClose={() => setSelectedClient(null)} />}
     </div>
   );
 }
@@ -258,7 +322,7 @@ function ClientMetric({
   icon: typeof UsersRound;
   label: string;
   value: number;
-  trend: string;
+  trend?: string;
   tone: 'orange' | 'green' | 'amber' | 'blue';
   negative?: boolean;
 }) {
@@ -406,7 +470,7 @@ function ClientDetailPanel({ sale, onClose }: { sale: Sale; onClose: () => void 
           <div className="mt-4">
             {activeTab === 'historial' ? (
               <div className="space-y-4">
-                <TimelineItem tone="blue" title="Venta creada" detail={`por ${sale.nombres_cliente}`} date={formatShortDate(sale.created_at)} />
+                <TimelineItem tone="blue" title="Venta creada" detail={`Titular del plan ${sale.nombres_cliente}`} date={formatShortDate(sale.created_at)} />
                 <TimelineItem tone="green" title={STATUS_LABELS[sale.estado]} detail="Estado actual del servicio" date={formatShortDate(sale.updated_at)} />
                 <TimelineItem tone="orange" title="Plan contratado" detail={sale.plan_contratar} date={formatShortDate(sale.created_at)} />
               </div>

@@ -12,14 +12,24 @@ export type SaleStatus =
 export type DocumentType = 'DNI' | 'CE' | 'PASAPORTE';
 export type HousingType = 'Casa' | 'Multifamiliar';
 
+export type ProfileUpsertPayload = Omit<Profile, 'id' | 'created_at'> & {
+  id?: string;
+  password?: string;
+  supervisor_id?: string;
+};
+
 export interface Profile {
   id: string;
   nombres: string;
   dni?: string;
   correo: string;
   correo_recuperacion: string;
+  direccion: string;
+  fecha_nacimiento: string;
+  celular: string;
   rol: Role;
   activo: boolean;
+  supervisor_id?: string;
   created_at: string;
 }
 
@@ -44,6 +54,7 @@ export interface Sale {
   distrito: string;
   referencia: string;
   plan_contratar: string;
+  meses: number;
   mesh: number;
   win_box: number;
   observaciones: string;

@@ -35,6 +35,7 @@ export const demoProfiles: Profile[] = [
     correo_recuperacion: 'luis.medina.personal@gmail.com',
     rol: 'ASESOR',
     activo: true,
+    supervisor_id: 'usr-supervisor',
     created_at: '2026-05-23T09:00:00.000Z',
   },
   {
@@ -44,7 +45,21 @@ export const demoProfiles: Profile[] = [
     correo_recuperacion: 'valeria.castro.personal@gmail.com',
     rol: 'ASESOR',
     activo: true,
+    supervisor_id: 'usr-supervisor',
     created_at: '2026-05-24T09:00:00.000Z',
+  },
+  {
+    id: 'usr-asesor-1',
+    nombres: 'Hilda Milagros Aznarán Nunja',
+    correo: 'hilda.aznaran@win.pe',
+    correo_recuperacion: 'milagrosaznaran130505@gmail.com',
+    celular: '999888777',
+    fecha_nacimiento: '1995-05-13',
+    direccion: 'Av. Las Palmas 123',
+    rol: 'ASESOR',
+    activo: true,
+    supervisor_id: 'usr-supervisor',
+    created_at: new Date().toISOString(),
   },
 ];
 

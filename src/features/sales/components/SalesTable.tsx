@@ -3,6 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { initials } from '@/shared/lib/format';
 import { canChangeStatus, canEditSale } from '@/shared/lib/permissions';
+import { STATUS_LABELS } from '@/shared/lib/constants';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { PAGE_SIZE, Pagination } from '@/shared/ui/Pagination';
 import type { Profile, Sale } from '@/types';
@@ -32,35 +33,31 @@ export function SalesTable({ sales, profiles, user, onEdit, onStatus, onView, on
   if (!sales.length) return <EmptyState title="No se encontraron ventas" />;
 
   return (
-    <section className="overflow-hidden rounded-[20px] border border-[#EDE4DC] bg-white shadow-[0_14px_34px_rgba(91,47,20,0.055)]">
-      <div className="overflow-x-auto">
-        <table className="min-w-[1120px] w-full border-collapse text-[13px]">
+    <section className="overflow-hidden rounded-[20px] border border-[#EDE4DC] bg-white shadow-[0_14px_34px_rgba(91,47,20,0.055)] print:m-0 print:border-none print:shadow-none">
+      <div className="overflow-x-auto print:overflow-visible">
+        <table className="min-w-[1120px] w-full border-collapse text-[13px] print:min-w-0 print:w-full print:table-fixed print:text-xs">
           <thead>
-            <tr className="border-b border-[#E0BDAA] bg-[#FFF2E7] text-left text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#4B3024]">
-              <th className="w-[104px] px-5 py-4">ID Venta</th>
-              <th className="px-4 py-4">Cliente</th>
-              <th className="px-4 py-4">Servicio</th>
-              <th className="px-4 py-4">Plan</th>
-              <th className="px-4 py-4">Supervisor</th>
-              <th className="px-4 py-4">Asesor</th>
-              <th className="px-4 py-4">Fecha</th>
-              <th className="px-4 py-4">Estado</th>
-              <th className="px-5 py-4 text-right">Acciones</th>
+            <tr className="border-b border-[#E0BDAA] bg-[#FFF2E7] text-left text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#4B3024] print:text-[9px]">
+              <th className="w-[104px] px-5 py-4 print:px-2">ID Venta</th>
+              <th className="px-4 py-4 print:px-2">Cliente</th>
+              <th className="px-4 py-4 print:px-2">Servicio</th>
+              <th className="px-4 py-4 print:px-2">Plan</th>
+              <th className="px-4 py-4 print:px-2">Supervisor</th>
+              <th className="px-4 py-4 print:px-2">Asesor</th>
+              <th className="px-4 py-4 print:px-2">Fecha</th>
+              <th className="px-4 py-4 print:px-2">Estado</th>
+              <th className="print:hidden px-5 py-4 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EDE4DC]">
             {pagedSales.map((sale, index) => (
               <tr key={sale.id} className="transition hover:bg-[#FFF8F3]">
-                <td className="px-5 py-4 align-middle">
+                <td className="px-5 py-4 align-middle print:px-2">
                   <span className="font-extrabold leading-5 text-[#A32800]">
-                    VT-
-                    <br />
-                    {new Date(sale.created_at).getFullYear()}-
-                    <br />
-                    {String((currentPage - 1) * PAGE_SIZE + index + 581).padStart(5, '0')}
+                    VT-{new Date(sale.created_at).getFullYear()}-{String((currentPage - 1) * PAGE_SIZE + index + 581).padStart(5, '0')}
                   </span>
                 </td>
-                <td className="px-4 py-4 align-middle">
+                <td className="px-4 py-4 align-middle print:px-2 print:break-all">
                   <div className="flex items-center gap-3">
                     <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#FFD8CA] text-[11px] font-extrabold text-[#8C2D00]">
                       {initials(sale.nombres_cliente)}
@@ -71,31 +68,33 @@ export function SalesTable({ sales, profiles, user, onEdit, onStatus, onView, on
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-4 align-middle">
-                  <div className="flex items-center gap-2.5 text-[#4B3024]">
-                    <Wifi className="h-3.5 w-3.5 text-[#C94A00]" aria-hidden="true" />
-                    <span className="font-semibold leading-5">
-                      Internet
-                      <span className="block">Residencial</span>
+                <td className="px-4 py-4 align-middle print:px-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-[#4B3024]">
+                      {sale.plan_contratar.toLowerCase().includes('fono') || sale.plan_contratar.toLowerCase().includes('dúo') || sale.plan_contratar.toLowerCase().includes('duo') ? 'Dúo' : 'Internet'}
                     </span>
                   </div>
                 </td>
-                <td className="max-w-[130px] px-4 py-4 align-middle font-semibold leading-5 text-[#4B3024]">
-                  {formatPlan(sale.plan_contratar)}
+                <td className="px-4 py-4 align-middle print:px-2">
+                  <div className="font-semibold text-[#4B3024]">{formatPlan(sale.plan_contratar)}</div>
                 </td>
-                <td className="px-4 py-4 align-middle font-semibold leading-5 text-[#4B3024]">
-                  {getName(sale.supervisor_id)}
+                <td className="px-4 py-4 align-middle print:px-2">
+                  <div className="font-semibold text-[#4B3024]">
+                    {profiles.find((p) => p.id === sale.supervisor_id)?.nombres.split(' ')[0] ?? 'No asignado'}
+                  </div>
                 </td>
-                <td className="px-4 py-4 align-middle font-semibold leading-5 text-[#4B3024]">
-                  {getName(sale.asesor_id)}
+                <td className="px-4 py-4 align-middle print:px-2">
+                  <div className="font-semibold text-[#4B3024]">
+                    {profiles.find((p) => p.id === sale.asesor_id)?.nombres.split(' ')[0] ?? 'No asignado'}
+                  </div>
                 </td>
-                <td className="px-4 py-4 align-middle font-semibold text-[#4B3024]">
-                  {formatShortDate(sale.created_at)}
+                <td className="px-4 py-4 align-middle print:px-2">
+                  <span className="font-semibold text-[#8A7F78]">{formatShortDate(sale.created_at)}</span>
                 </td>
-                <td className="px-4 py-4 align-middle">
+                <td className="px-4 py-4 align-middle print:px-2">
                   <SaleStatusPill status={sale.estado} />
                 </td>
-                <td className="px-5 py-4 align-middle">
+                <td className="print:hidden px-5 py-4 text-right align-middle">
                   <div className="relative flex justify-end gap-1">
                     <button
                       type="button"
@@ -163,7 +162,9 @@ export function SalesTable({ sales, profiles, user, onEdit, onStatus, onView, on
         </table>
       </div>
 
-      <Pagination page={currentPage} totalItems={sales.length} itemLabel="ventas" onPageChange={setPage} />
+      <section className="print:hidden p-4">
+        <Pagination page={currentPage} totalItems={sales.length} itemLabel="ventas" onPageChange={setPage} />
+      </section>
     </section>
   );
 }
@@ -190,12 +191,9 @@ function ActionItem({
 }
 
 function formatPlan(plan: string) {
-  const speed = plan.match(/\d+\s?MBPS/)?.[0]?.replace('MBPS', 'Mbps') ?? plan;
-  const category = plan.includes('1000') || plan.includes('750') ? 'Hogar' : 'Hogar';
   return (
     <>
-      {category}
-      <span className="block">{speed}</span>
+      <span className="block">{plan}</span>
     </>
   );
 }
@@ -208,27 +206,20 @@ function formatShortDate(value: string) {
   }).format(new Date(value));
 }
 
-function getSimpleStatus(status: Sale['estado']) {
-  if (status === 'INSTALADO') return 'COMPLETADA';
-  if (status === 'CANCELADO') return 'CANCELADA';
-  if (status === 'RECHAZADO') return 'VENCIDA';
-  if (status === 'PENDIENTE_GRABACION') return 'PENDIENTE';
-  return 'EN PROCESO';
-}
-
 function SaleStatusPill({ status }: { status: Sale['estado'] }) {
-  const styles = {
-    COMPLETADA: 'bg-[#DDF8E9] text-[#2FA66A]',
-    'EN PROCESO': 'bg-[#EAF3FF] text-[#2F80ED]',
-    PENDIENTE: 'bg-[#FFF1C7] text-[#B46A00]',
-    VENCIDA: 'bg-[#FFE8E8] text-[#D64545]',
-    CANCELADA: 'bg-[#F3EAE3] text-[#6B625C]',
-  } satisfies Record<string, string>;
-  const label = getSimpleStatus(status);
-
+  const styles: Record<Sale['estado'], string> = {
+    PENDIENTE_GRABACION: 'bg-[#FFF1C7] text-[#B46A00]',
+    PROGRAMADO_GRABACION: 'bg-[#EEF2FF] text-[#4338CA]',
+    GRABADO: 'bg-[#EAF3FF] text-[#2F80ED]',
+    PROGRAMADO_INSTALACION: 'bg-[#F4EBFF] text-[#7A3BCC]',
+    INSTALADO: 'bg-[#DDF8E9] text-[#2FA66A]',
+    RECHAZADO: 'bg-[#FFE8E8] text-[#D64545]',
+    CANCELADO: 'bg-[#F3EAE3] text-[#6B625C]',
+  };
+  
   return (
-    <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-extrabold ${styles[label]}`}>
-      {label}
+    <span className={`inline-flex items-center justify-center whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${styles[status]}`}>
+      {STATUS_LABELS[status]}
     </span>
   );
 }

@@ -21,7 +21,12 @@ function RoleRoute({ element, blockedRoles }: { element: React.ReactNode; blocke
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   if (blockedRoles && blockedRoles.includes(user.rol)) {
-    return <Navigate to="/ventas" replace />;
+    return (
+      <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+        <h2 className="text-2xl font-bold text-[#4B3024]">Acceso Denegado</h2>
+        <p className="mt-2 text-[#8A7F78]">No tienes permisos para ver esta página.</p>
+      </div>
+    );
   }
   return <>{element}</>;
 }

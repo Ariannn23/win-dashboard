@@ -75,11 +75,13 @@ export function DateControl({
   onChange,
   min,
   placeholder = 'Seleccionar fecha',
+  placement = 'bottom',
 }: {
   value: string;
   onChange: (value: string) => void;
   min?: string;
   placeholder?: string;
+  placement?: 'top' | 'bottom';
 }) {
   const [open, setOpen] = useState(false);
   const selectedDate = value ? new Date(`${value}T00:00:00`) : null;
@@ -167,7 +169,9 @@ export function DateControl({
       </div>
 
       {open && (
-        <div className="absolute left-0 top-[calc(100%+0.45rem)] z-50 w-[292px] rounded-[16px] border border-[#E8D8CC] bg-white p-3 shadow-[0_18px_45px_rgba(91,47,20,0.16)]">
+        <div className={`absolute left-0 z-50 w-[292px] rounded-[16px] border border-[#E8D8CC] bg-white p-3 shadow-[0_18px_45px_rgba(91,47,20,0.16)] ${
+          placement === 'top' ? 'bottom-[calc(100%+0.45rem)]' : 'top-[calc(100%+0.45rem)]'
+        }`}>
           <div className="flex items-center justify-between">
             <button
               type="button"

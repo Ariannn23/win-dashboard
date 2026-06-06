@@ -115,3 +115,10 @@ input:-webkit-autofill:active{
     -webkit-text-fill-color: #1f1f1f !important;
     transition: background-color 5000s ease-in-out 0s;
 }
+
+@media print {
+  @page {
+    size: landscape;
+    margin: 1cm;
+  }
+}

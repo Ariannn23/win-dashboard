@@ -49,8 +49,8 @@ const blankValues: SaleFormValues = {
   coordenadas: '',
   tipo_vivienda: 'Casa',
   distrito: '',
-  referencia: '',
   plan_contratar: '350 MBPS + FONOWIN',
+  meses: 6,
   mesh: 0,
   win_box: 0,
   observaciones: '',
@@ -79,6 +79,7 @@ function toFormValues(sale: Sale): SaleFormValues {
     distrito: sale.distrito,
     referencia: sale.referencia,
     plan_contratar: sale.plan_contratar,
+    meses: sale.meses,
     mesh: sale.mesh,
     win_box: sale.win_box,
     observaciones: sale.observaciones ?? '',
@@ -126,7 +127,11 @@ export function SaleFormModal({ sale, profiles, currentUser, onClose, onSubmit }
   });
 
   const [clientName, clientEmail, clientPhone, docType, docNumber, selectedPlan] = watchedClient;
-  const planPrice = planBasePriceLabel(selectedPlan || '');
+  
+  const selectedPlanDetails = planes.find(p => p.nombre === selectedPlan);
+  const planPrice = selectedPlanDetails 
+    ? `S/ ${selectedPlanDetails.precio_mensual.toFixed(2)}`
+    : `S/ 0.00 / mes`;
 
   const inputClass =
     'h-12 w-full rounded-[14px] border border-[#E8D8CC] bg-white px-4 text-sm font-semibold text-[#1F1F1F] outline-none transition focus:border-[#FF7A1A] focus:ring-4 focus:ring-[#FFE2CC]/70';
@@ -376,12 +381,28 @@ export function SaleFormModal({ sale, profiles, currentUser, onClose, onSubmit }
 
               <div className="space-y-5">
                 <SectionTitle icon={Banknote} title="Monto" />
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <Field label="Monto mensual">
                     <input readOnly value={planPrice} className={inputClass} />
                   </Field>
                   <Field label="Frecuencia">
                     <ComboBox value="Mensual" onChange={() => undefined} options={[{ value: 'Mensual', label: 'Mensual' }, { value: 'Anual', label: 'Anual' }]} />
+                  </Field>
+                  <Field label="Meses de contrato *" error={errors.meses?.message}>
+                    <Controller
+                      name="meses"
+                      control={control}
+                      render={({ field }) => (
+                        <ComboBox
+                          value={String(field.value)}
+                          onChange={(val) => field.onChange(Number(val))}
+                          options={Array.from({ length: 12 }, (_, i) => ({
+                            value: String(i + 1),
+                            label: `${i + 1} mes${i === 0 ? '' : 'es'}`,
+                          }))}
+                        />
+                      )}
+                    />
                   </Field>
                 </div>
               </div>
@@ -507,14 +528,14 @@ export function SaleFormModal({ sale, profiles, currentUser, onClose, onSubmit }
               </div>
             </section>
 
-            <section className={`grid gap-4 ${canEditBackOffice ? 'md:grid-cols-2' : ''}`}>
+            <section className={`grid gap-4 ${canEditBackOffice && sale ? 'md:grid-cols-2' : ''}`}>
               <div>
                 <SectionTitle icon={ClipboardEdit} title="Observaciones" />
                 <Field error={errors.observaciones?.message}>
                   <textarea {...register('observaciones')} className={areaClass} />
                 </Field>
               </div>
-              {canEditBackOffice ? (
+              {canEditBackOffice && sale ? (
                 <div>
                   <SectionTitle icon={FileText} title="Back office" />
                   <Field label="Observaciones internas" error={errors.observaciones_back?.message}>

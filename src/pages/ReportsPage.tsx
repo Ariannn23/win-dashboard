@@ -23,6 +23,7 @@ import { ComboBox, type SelectOption } from '@/shared/ui/FormControls';
 import { PAGE_SIZE, Pagination } from '@/shared/ui/Pagination';
 import { PageSkeleton } from '@/shared/ui/Skeleton';
 import { useToast } from '@/shared/ui/Toast';
+import * as XLSX from 'xlsx';
 
 type ReportType = 'VENTAS' | 'CLIENTES' | 'ASESORES' | 'PLANES';
 
@@ -207,9 +208,9 @@ export function ReportsPage() {
     setPage(1);
   }, [advisor, months, reportType]);
 
-  const exportCsv = () => {
+  const exportExcel = () => {
     const header = ['Mes', 'Ventas', 'Clientes nuevos', 'Monto vendido', 'Completadas', 'Pendientes', 'Conversion'];
-    const body = exportRows.map((row) => [
+    const rows = exportRows.map((row) => [
       row.label,
       row.sales,
       row.clients,
@@ -218,17 +219,11 @@ export function ReportsPage() {
       row.pending,
       `${row.conversion.toFixed(1)}%`,
     ]);
-    const csv = [header, ...body]
-      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `reporte-${currentYear}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    showToast({ title: 'CSV generado', detail: 'El reporte se descargo correctamente.', tone: 'success' });
+    const worksheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Reporte');
+    XLSX.writeFile(workbook, `reporte-${currentYear}.xlsx`);
+    showToast({ title: 'Excel generado', detail: 'El reporte se descargo correctamente.', tone: 'success' });
   };
 
   const exportPdf = () => {
@@ -317,11 +312,11 @@ export function ReportsPage() {
           </button>
           <button
             type="button"
-            onClick={exportCsv}
+            onClick={exportExcel}
             className="flex h-11 items-center gap-2 rounded-[14px] border border-[#E8D8CC] bg-white px-5 text-sm font-extrabold text-[#4B3024] hover:bg-[#FFF2E7]"
           >
             <Download className="h-4 w-4" aria-hidden="true" />
-            Exportar CSV
+            Exportar Excel
           </button>
         </div>
       </section>
@@ -359,7 +354,7 @@ export function ReportsPage() {
             <button
               type="button"
               onClick={() => {
-                setMonths([monthOptions[0].key]);
+                setMonths([defaultMonth]);
                 setReportType('VENTAS');
                 setAdvisor('TODOS');
               }}

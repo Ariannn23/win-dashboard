@@ -3,8 +3,11 @@ import type { Profile, Sale } from '@/types';
 
 export function canChangeStatus(user: Profile | null | undefined, sale: Sale) {
   if (!user) return false;
-  if (user.rol === 'ADMIN' || user.rol === 'BACK') return true;
-  if (user.rol === 'ASESOR' || user.rol === 'SUPERVISOR') {
+  if (user.rol === 'ADMIN') return true;
+  if (user.rol === 'BACK') {
+    return sale.estado !== 'INSTALADO';
+  }
+  if (user.rol === 'SUPERVISOR') {
     return sale.estado === 'RECHAZADO' || sale.estado === 'CANCELADO';
   }
   return false;
@@ -19,6 +22,10 @@ export function canManageAsesores(user?: Profile | null) {
 }
 
 export function canCreateSales(user?: Profile | null) {
+  return user?.rol === 'ADMIN' || user?.rol === 'SUPERVISOR';
+}
+
+export function canExportData(user?: Profile | null) {
   return user?.rol === 'ADMIN' || user?.rol === 'SUPERVISOR';
 }
 

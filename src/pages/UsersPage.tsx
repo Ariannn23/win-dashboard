@@ -29,20 +29,14 @@ export function UsersPage() {
   if (!user || !canManageUsers(user)) return <Navigate to="/dashboard" replace />;
   if (isLoading) return <PageSkeleton cards={3} tableRows={5} tableColumns={7} />;
 
-  const assignedAdvisors = useMemo(() => {
-    if (user?.rol !== 'SUPERVISOR') return new Set<string>();
-    return new Set(sales.filter((s) => s.supervisor_id === user.id).map((s) => s.asesor_id));
-  }, [sales, user]);
+  const baseProfiles = useMemo(() => {
+    if (user?.rol !== 'SUPERVISOR') return profiles;
+    return profiles.filter((profile) => profile.id === user.id || (profile.rol === 'ASESOR' && profile.supervisor_id === user.id));
+  }, [profiles, user]);
 
   const filteredProfiles = useMemo(() => {
     const text = query.trim().toLowerCase();
-    return profiles.filter((profile) => {
-      if (user?.rol === 'SUPERVISOR') {
-        if (profile.id !== user.id && !assignedAdvisors.has(profile.id)) {
-          return false;
-        }
-      }
-
+    return baseProfiles.filter((profile) => {
       const matchesText =
         !text ||
         profile.nombres.toLowerCase().includes(text) ||
@@ -56,7 +50,7 @@ export function UsersPage() {
         (status === 'INACTIVO' && !profile.activo);
       return matchesText && matchesRole && matchesStatus;
     });
-  }, [profiles, query, role, status]);
+  }, [baseProfiles, query, role, status]);
   const totalPages = Math.max(1, Math.ceil(filteredProfiles.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const pagedProfiles = filteredProfiles.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -65,9 +59,9 @@ export function UsersPage() {
     setPage(1);
   }, [query, role, status]);
 
-  const admins = profiles.filter((profile) => profile.rol === 'ADMIN').length;
-  const activeAdmins = profiles.filter((profile) => profile.rol === 'ADMIN' && profile.activo).length;
-  const advisors = profiles.filter((profile) => profile.rol === 'ASESOR').length;
+  const admins = baseProfiles.filter((profile) => profile.rol === 'ADMIN').length;
+  const activeAdmins = baseProfiles.filter((profile) => profile.rol === 'ADMIN' && profile.activo).length;
+  const advisors = baseProfiles.filter((profile) => profile.rol === 'ASESOR').length;
 
   const handleToggleProfile = (profile: Profile) => {
     if (profile.rol === 'ADMIN' && profile.activo && activeAdmins <= 1) {
@@ -124,8 +118,10 @@ export function UsersPage() {
         </button>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <UserSummary icon={ShieldCheck} value={admins} label="Administradores" />
+      <section className={`grid gap-4 ${user.rol === 'SUPERVISOR' ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
+        {user.rol !== 'SUPERVISOR' && (
+          <UserSummary icon={ShieldCheck} value={admins} label="Administradores" />
+        )}
         <UserSummary icon={UserCog} value={advisors} label="Asesores de venta" />
         <UserSummary icon={Clock3} value="34min" label="Ultima actividad media" />
       </section>
@@ -229,18 +225,20 @@ export function UsersPage() {
                       >
                         <Edit3 className="h-4 w-4" aria-hidden="true" />
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleProfile(profile)}
-                        title={profile.activo ? 'Suspender usuario' : 'Activar usuario'}
-                        className="grid h-9 w-9 place-items-center rounded-xl text-[#4B3024] hover:bg-[#FFF2E7] hover:text-[#C94A00]"
-                      >
-                        {profile.activo ? (
-                          <PowerOff className="h-4 w-4" aria-hidden="true" />
-                        ) : (
-                          <Power className="h-4 w-4" aria-hidden="true" />
-                        )}
-                      </button>
+                      {user.rol !== 'SUPERVISOR' && (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleProfile(profile)}
+                          title={profile.activo ? 'Suspender usuario' : 'Activar usuario'}
+                          className="grid h-9 w-9 place-items-center rounded-xl text-[#4B3024] hover:bg-[#FFF2E7] hover:text-[#C94A00]"
+                        >
+                          {profile.activo ? (
+                            <PowerOff className="h-4 w-4" aria-hidden="true" />
+                          ) : (
+                            <Power className="h-4 w-4" aria-hidden="true" />
+                          )}
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -269,7 +267,11 @@ export function UsersPage() {
               tone: 'info',
             });
             try {
-              await upsertProfile({ ...values, id: editing?.id });
+              await upsertProfile({ 
+                ...values, 
+                id: editing?.id,
+                supervisor_id: user.rol === 'SUPERVISOR' ? user.id : editing?.supervisor_id
+              });
               setShowForm(false);
               if (!editing) {
                 setCreatedCredentials({ correo: values.correo, password: values.password });
@@ -352,7 +354,7 @@ export function UsersPage() {
 function RolePill({ role }: { role: Role }) {
   const styles = {
     ADMIN: 'bg-[#FFE2CC] text-[#C94A00]',
-    BACK: 'bg-[#E9F4FF] text-[#2F80ED]',
+    BACK: 'bg-[#F3E8FF] text-[#7E22CE]',
     SUPERVISOR: 'bg-[#EAF3FF] text-[#005DE8]',
     ASESOR: 'bg-[#FFF1C7] text-[#B46A00]',
   } satisfies Record<Role, string>;

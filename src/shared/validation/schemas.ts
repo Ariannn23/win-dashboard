@@ -31,6 +31,7 @@ export const saleSchema = z.object({
   distrito: z.string().min(1, 'Selecciona distrito'),
   referencia: z.string().min(3, 'Ingresa una referencia'),
   plan_contratar: z.string().min(1, 'El plan es requerido'),
+  meses: z.coerce.number().int().min(1, 'Mínimo 1 mes').max(12, 'Máximo 12 meses').default(6),
   mesh: z.coerce.number().int().min(0).max(20),
   win_box: z.coerce.number().int().min(0).max(20),
   observaciones: z.string().optional().default(''),
@@ -63,6 +64,9 @@ export const userSchema = z.object({
     .toLowerCase()
     .transform((value) => (value.includes('@') ? value : `${value}@win.pe`))
     .pipe(z.string().email('Correo invalido').endsWith('@win.pe', 'El correo debe terminar en @win.pe')),
+  direccion: z.string().min(5, 'Ingresa una direccion valida'),
+  fecha_nacimiento: z.string().min(1, 'Selecciona la fecha de nacimiento'),
+  celular: phoneSchema,
   correo_recuperacion: z
     .string()
     .trim()

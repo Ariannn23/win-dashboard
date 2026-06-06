@@ -9,3 +9,5 @@ Port 5175 is in use, trying another one...
   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.56.1:[1m5176[22m/[39m
   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.18.5:[1m5176[22m/[39m
   [32m➜[39m  [1mNetwork[22m: [36mhttp://172.21.224.1:[1m5176[22m/[39m
+[2m8:38:38[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mindex.html[22m
+[2m9:39:51[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mindex.html[22m

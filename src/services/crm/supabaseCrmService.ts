@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js';
 import { supabase } from '@/services/supabase/client';
 import type { Profile, Sale, StatusHistory } from '@/types';
 import type {
@@ -49,6 +50,7 @@ function salePayload(payload: SaleUpsertPayload) {
     distrito: payload.distrito,
     referencia: payload.referencia,
     plan_contratar: payload.plan_contratar,
+    meses: payload.meses,
     mesh: payload.mesh,
     win_box: payload.win_box,
     observaciones: payload.observaciones,
@@ -162,9 +164,21 @@ export const supabaseCrmService: CrmDataService = {
     if (!existing) {
       if (!payload.password) throw new Error('Se requiere contraseña para crear un usuario nuevo.');
       
-      const { data: authData, error: authError } = await client.auth.signUp({
+      const tempClient = createClient(
+        import.meta.env.VITE_SUPABASE_URL as string,
+        import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+        { auth: { persistSession: false, autoRefreshToken: false } }
+      );
+
+      const { data: authData, error: authError } = await tempClient.auth.signUp({
         email: payload.correo,
         password: payload.password,
+        options: {
+          data: {
+            full_name: payload.nombres,
+            name: payload.nombres,
+          },
+        },
       });
 
       if (authError) throw new Error(`Error creando usuario: ${authError.message}`);
@@ -186,8 +200,12 @@ export const supabaseCrmService: CrmDataService = {
             dni: payload.dni ?? '',
             correo: payload.correo,
             correo_recuperacion: payload.correo_recuperacion,
+            direccion: payload.direccion,
+            fecha_nacimiento: payload.fecha_nacimiento,
+            celular: payload.celular,
             rol: payload.rol,
             activo: payload.activo,
+            supervisor_id: payload.supervisor_id,
           })
           .select('*')
           .single();
@@ -203,8 +221,12 @@ export const supabaseCrmService: CrmDataService = {
           nombres: payload.nombres,
           dni: payload.dni ?? '',
           correo_recuperacion: payload.correo_recuperacion,
+          direccion: payload.direccion,
+          fecha_nacimiento: payload.fecha_nacimiento,
+          celular: payload.celular,
           rol: payload.rol,
           activo: payload.activo,
+          supervisor_id: payload.supervisor_id,
         })
         .eq('id', authData.user.id)
         .select('*')
@@ -220,8 +242,12 @@ export const supabaseCrmService: CrmDataService = {
         nombres: payload.nombres,
         correo: payload.correo,
         correo_recuperacion: payload.correo_recuperacion,
+        direccion: payload.direccion,
+        fecha_nacimiento: payload.fecha_nacimiento,
+        celular: payload.celular,
         rol: payload.rol,
         activo: payload.activo,
+        supervisor_id: payload.supervisor_id,
       })
       .eq('id', existing.id)
       .select('*')
