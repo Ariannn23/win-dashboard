@@ -8,6 +8,7 @@ interface AuthContextValue {
   profiles: Profile[];
   login: (correo: string, password?: string) => Promise<void>;
   logout: () => Promise<void>;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -15,6 +16,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { profiles, reload } = useCrm();
   const [user, setUser] = useState<Profile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const reloadedUserId = useRef<string | null>(null);
 
   useEffect(() => {
@@ -33,6 +35,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch {
         if (mounted) setUser(null);
+      } finally {
+        if (mounted) setIsLoading(false);
       }
     }
 
@@ -57,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await reload();
   }
 
-  const value = useMemo(() => ({ user, profiles, login, logout }), [profiles, user]);
+  const value = useMemo(() => ({ user, profiles, login, logout, isLoading }), [profiles, user, isLoading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

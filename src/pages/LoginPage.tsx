@@ -18,9 +18,10 @@ import { Modal } from "@/shared/ui/Modal";
 import loginHero from "@/assets/login-hero.png";
 import toolIcon from "@/assets/tool-3d.png";
 import logoWin from "@/assets/icono.png";
+import { LoadingScreen } from "@/app/App";
 
 export function LoginPage() {
-  const { user, login } = useAuth();
+  const { user, login, isLoading } = useAuth();
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -28,6 +29,7 @@ export function LoginPage() {
   const [error, setError] = useState("");
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
 
+  if (isLoading) return <LoadingScreen />;
   if (user) return <Navigate to="/" replace />;
 
   async function handleSubmit(event: FormEvent) {
